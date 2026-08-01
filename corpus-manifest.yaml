@@ -1,0 +1,45 @@
+programme: OriginOS Discovery Research Programme
+status: corpus_reconstruction
+governing_covenant: "Reality is the specification."
+
+source_root: source/original-import
+
+expected_sprints:
+  - Discovery Sprint 0
+  - Discovery Sprint I
+  - Discovery Sprint II
+  - Discovery Sprint III
+  - Discovery Sprint IV
+
+known_governance_sources:
+  - The Constitution of the OriginOS Discovery Programme.docx
+  - 100 - Governance
+  - Amendments
+
+known_document_families:
+  sprint_iii:
+    - Part I - Foundations of Enterprise Mathematics
+    - Part II - Representation Mathematics
+    - Part III - Emergent Enterprise Mathematical Structures
+    - Part III A - Emergent Enterprise Mathematical Structures
+    - Part III B - Emergent Enterprise Mathematical Structures
+    - Part III C - Emergent Enterprise Mathematical Structures
+    - Old Part III - Mathematical Kernel of Enterprise
+    - TOC- Discovery Research Sprint III
+  sprint_iv:
+    - Part I — Foundations of Enterprise Computation
+    - Part II — Foundations of Enterprise Computation
+
+document_layers:
+  - immutable_research_record
+  - active_constitutional_baseline
+  - canonical_publication_edition
+
+rules:
+  source_files_are_immutable: true
+  prior_ai_audits_are_authoritative: false
+  initial_phase_allows_source_edits: false
+  full_review_requires_page_or_section_coverage: true
+  exact_source_reference_required: true
+  unresolved_questions_must_remain_unresolved: true
+  recovery_order_is_not_automatically_ontological_dependency: true
