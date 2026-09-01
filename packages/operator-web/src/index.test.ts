@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCocoaLotEnvelope, createCustodyTransferEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
+import { createCocoaLotEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
 describe("SW2-01 Merchant/Cocoa operator shell", () => {
   it("renders every declared route with one active navigation item", () => {
     expect(operatorRoutes.map(({ path }) => path)).toEqual(["/", "/lots", "/transfers", "/workflow", "/system"]);
@@ -27,6 +27,15 @@ describe("SW2-01 Merchant/Cocoa operator shell", () => {
     const page = renderOperatorPage("/transfers")!.body;
     for (const field of ["apiKey", "lotRef", "transferId", "quantityKg", "fromCustodianRef", "toCustodianRef", "agentRef", "agencyRef", "authorityRef", "purposeRef", "evidenceRef", "attributionRule"]) expect(page).toContain(`name="${field}"`);
     expect(page).toContain("Load eligible lots"); expect(page).toContain('commandType:"transferCustody"'); expect(page).toContain('fetch("/v2/records"');
+    expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
+  });
+  it("maps one eligible lot to one atomic processing-initiation command", () => {
+    expect(createCocoaProcessingEnvelope({ workflowId: "GH-PROCESS-001", lotRef: "originos:material-lot-GH-2026-001", processorRef: "originos:processor-1", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-receipt", attributionRule: "originos:attribution-direct-agent" })).toEqual({
+      commandId: "operator-GH-PROCESS-001", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRefs: ["originos:evidence-cocoa-receipt"], attributionRule: "originos:attribution-direct-agent", command: { commandType: "initiateCocoaProcessing", payload: { workflowId: "GH-PROCESS-001", lotRef: "originos:material-lot-GH-2026-001", processorRef: "originos:processor-1" } }
+    });
+    const page = renderOperatorPage("/workflow")!.body;
+    for (const field of ["apiKey", "workflowId", "lotRef", "processorRef", "agentRef", "agencyRef", "authorityRef", "purposeRef", "evidenceRef", "attributionRule"]) expect(page).toContain(`name="${field}"`);
+    expect(page).toContain("Load eligible lots"); expect(page).toContain('commandType:"initiateCocoaProcessing"'); expect(page).toContain('fetch("/v2/records"');
     expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
   });
 });

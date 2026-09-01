@@ -14,6 +14,14 @@ const foundationRecord = (type: string, status: CanonicalRecord["assertionStatus
   reason: "SW0-03 foundation transition", content
 });
 
+const materialLotState = (records: readonly CanonicalRecord[], lotRef: unknown): { readonly lot: CanonicalRecord; readonly currentCustodianRef: unknown } | undefined => {
+  const lot = typeof lotRef === "string" ? records.filter((record) => record.canonicalId === lotRef && record.canonicalType === "material-lot").at(-1) : undefined;
+  if (!lot) return undefined;
+  const transfers = records.filter((record) => record.canonicalType === "custody-transfer" && (record.content as Readonly<Record<string, unknown>>).lotRef === lotRef);
+  const latest = transfers.at(-1)?.content as Readonly<Record<string, unknown>> | undefined;
+  return { lot, currentCustodianRef: latest?.toCustodianRef ?? (lot.content as Readonly<Record<string, unknown>>).custodianRef };
+};
+
 export const applyCommand = (records: readonly CanonicalRecord[], command: KernelCommand): Result<TransitionOutcome> => {
   if (command.commandType === "authorizeAct" && command.payload.authorityRef == null) {
     return { ok: false, error: canonicalError("C2C_E005_AUTHORITY_INVALID", "Authority reference is required and cannot be inferred", ["C2C-INV-004","C2C-INV-019"]) };
@@ -38,12 +46,10 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
   }
   if (command.commandType === "transferCustody") {
     const lotRef = command.payload.lotRef;
-    const lot = typeof lotRef === "string" ? records.filter((record) => record.canonicalId === lotRef && record.canonicalType === "material-lot").at(-1) : undefined;
-    if (!lot) return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Custody transfer requires an existing material lot", [], { lotRef }) };
-    const lotContent = lot.content as Readonly<Record<string, unknown>>;
-    const priorTransfers = records.filter((record) => record.canonicalType === "custody-transfer" && (record.content as Readonly<Record<string, unknown>>).lotRef === lotRef);
-    const lastTransfer = priorTransfers.at(-1)?.content as Readonly<Record<string, unknown>> | undefined;
-    const currentCustodianRef = lastTransfer?.toCustodianRef ?? lotContent.custodianRef;
+    const state = materialLotState(records, lotRef);
+    if (!state) return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Custody transfer requires an existing material lot", [], { lotRef }) };
+    const lotContent = state.lot.content as Readonly<Record<string, unknown>>;
+    const currentCustodianRef = state.currentCustodianRef;
     if (command.payload.fromCustodianRef !== currentCustodianRef) {
       return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Transferor is not the lot's current custodian", [], { lotRef, currentCustodianRef, supplied: command.payload.fromCustodianRef }) };
     }
@@ -59,6 +65,22 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
       quantityKg: command.payload.quantityKg, conservationCheck: "balanced"
     });
     return { ok: true, value: { created: [transfer], superseded: [], facts: [{ recordType: "custody-transfer", status: "known" }] } };
+  }
+  if (command.commandType === "initiateCocoaProcessing") {
+    const { lotRef, processorRef, workflowId, agentRef, agencyRef, authorityRef } = command.payload;
+    const state = materialLotState(records, lotRef);
+    if (!state) return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Processing initiation requires an existing material lot", [], { lotRef }) };
+    if (state.currentCustodianRef !== processorRef) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Processing may only be initiated by the lot's current custodian", [], { lotRef, currentCustodianRef: state.currentCustodianRef, processorRef }) };
+    if (typeof authorityRef !== "string" || authorityRef.trim() === "") return { ok: false, error: canonicalError("C2C_E005_AUTHORITY_INVALID", "Processing initiation requires explicit Authority", ["C2C-INV-004"]) };
+    if (typeof agentRef !== "string" || agentRef.trim() === "" || typeof agencyRef !== "string" || agencyRef.trim() === "") return { ok: false, error: canonicalError("C2C_E004_PROVENANCE_MISSING", "Processing initiation requires explicit Agent and Agency", ["C2C-INV-003"]) };
+    const duplicate = records.some((record) => record.canonicalType === "transformation" && (record.content as Readonly<Record<string, unknown>>).lotRef === lotRef && (record.content as Readonly<Record<string, unknown>>).initiationStatus === "initiated");
+    if (duplicate) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Processing has already been initiated for this lot", [], { lotRef }) };
+    const decisionRef = `originos:decision-${String(workflowId)}-decision`;
+    const actionRef = `originos:act-${String(workflowId)}-act`;
+    const decision = foundationRecord("decision", "known", { fixtureId: `${String(workflowId)}-decision`, workflowId, lotRef, processorRef, deciderRef: agentRef, commitment: "process-cocoa" });
+    const act = foundationRecord("act", "known", { fixtureId: `${String(workflowId)}-act`, workflowId, lotRef, agentRef, authorityRef, decisionRef, conduct: "authorize-cocoa-processing", authorizationStatus: "authorized" });
+    const transformation = foundationRecord("transformation", "known", { fixtureId: `${String(workflowId)}-transformation`, workflowId, lotRef, processorRef, change: "raw-cocoa-to-processed-cocoa", causeKind: "agentic", agencyRef, actionRef, initiationStatus: "initiated" });
+    return { ok: true, value: { created: [decision, act, transformation], superseded: [], facts: [{ recordType: "decision" }, { recordType: "act" }, { recordType: "transformation", status: "initiated" }] } };
   }
   if (command.commandType === "compareCandidates") {
     const comparison = foundationRecord("comparison-result", "known", {

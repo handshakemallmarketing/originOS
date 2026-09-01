@@ -126,3 +126,9 @@ The API key is held only in the active page's JavaScript memory. It is not inser
 The Custody route loads persisted material lots and their custody history after operator authentication. Selecting a lot derives its complete measured quantity and current custodian; these values are read-only in the transfer form. A successful transfer is submitted through API v2 and reloaded from canonical persistence.
 
 The kernel now rejects custody transfer when the lot is absent, the sender is not the current custodian, the receiver equals the current custodian, or the quantity differs from the complete measured lot quantity. Current custody is derived from the material lot followed by its ordered custody events, so a former custodian cannot transfer the lot again after a valid handoff.
+
+### SW2-04 atomic processing initiation
+
+The Workflow route loads persisted cocoa lots and derives each lot's current custodian. An operator can initiate processing only when the selected processor currently holds the lot. One authenticated API v2 command creates a linked merchant Decision, attributable and authorized Act, and initiated Transformation in a single repository append, preventing a partially recorded initiation.
+
+The kernel rejects absent lots, processor/custodian mismatch, missing Agent, Agency, or Authority, and a second processing initiation for the same lot. This slice records initiation only: processing completion, Outcome, Consequence, and Value realization remain subsequent, separately accepted operations.
