@@ -82,6 +82,8 @@ importers:
         specifier: workspace:*
         version: link:../repository
 
+  packages/operator-web: {}
+
   packages/repository:
     dependencies:
       '@originos/canonical-types':
@@ -124,6 +126,9 @@ importers:
       '@originos/operations':
         specifier: workspace:*
         version: link:../operations
+      '@originos/operator-web':
+        specifier: workspace:*
+        version: link:../operator-web
       '@originos/repository':
         specifier: workspace:*
         version: link:../repository

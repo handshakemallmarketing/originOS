@@ -1,12 +1,13 @@
 {
   "name": "@originos/service-runtime",
-  "version": "0.10.0-alpha.1",
+  "version": "0.11.0-alpha.1",
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
     "@originos/application": "workspace:*",
     "@originos/auth": "workspace:*",
     "@originos/operations": "workspace:*",
+    "@originos/operator-web": "workspace:*",
     "@originos/repository": "workspace:*",
     "@originos/repository-postgres": "workspace:*",
     "@originos/transport-http": "workspace:*"

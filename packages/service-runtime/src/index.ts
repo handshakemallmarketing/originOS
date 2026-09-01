@@ -4,6 +4,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import { OriginApplication } from "@originos/application";
 import { StaticApiKeyAuthenticator } from "@originos/auth";
 import { acquireOperationalLock, checkDataIntegrity, JsonlAuditLog } from "@originos/operations";
+import { operatorWebApp } from "@originos/operator-web";
 import { JsonFileCanonicalRepository } from "@originos/repository";
 import type { CanonicalRepository } from "@originos/repository";
 import { PostgresCanonicalRepository } from "@originos/repository-postgres";
@@ -51,7 +52,7 @@ export const startOriginService = async (config: ServiceConfig): Promise<OriginS
   const auditLog = new JsonlAuditLog(join(config.dataDirectory, "audit-log.jsonl"));
   const receiptStore: CommandReceiptStore = postgres?.receiptStore() ?? new JsonCommandReceiptStore(join(config.dataDirectory, "command-receipts.json"));
   const server = createOriginHttpServer(application, receiptStore, {
-    authenticator, auditSink: auditLog, readiness: async () => {
+    authenticator, auditSink: auditLog, webApp: operatorWebApp, readiness: async () => {
       const fileIntegrity = await checkDataIntegrity(config.dataDirectory);
       if (!postgres) return fileIntegrity;
       const database = await postgres.check();

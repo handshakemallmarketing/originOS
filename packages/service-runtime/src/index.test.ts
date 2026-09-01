@@ -34,6 +34,9 @@ describe("SW1-04 service runtime", () => {
       await expect(startOriginService(config)).rejects.toThrow(/running|locked/);
       await expect(createOperationalBackup(dataDirectory, backupPath)).rejects.toThrow(/stop it before backup/);
       expect(await fetch(`${service.baseUrl}/health`).then((response) => response.json())).toEqual({ status: "ok" });
+      const shell = await fetch(service.baseUrl);
+      expect(shell.status).toBe(200); expect(shell.headers.get("content-type")).toBe("text/html; charset=utf-8"); expect(await shell.text()).toContain("Cocoa operations");
+      expect(await fetch(`${service.baseUrl}/lots`).then((response) => response.text())).toContain("Cocoa lots");
       expect((await fetch(`${service.baseUrl}/ready`)).status).toBe(200);
       const commands = cocoaWorkflowCommands({
         runId: "api-cocoa", quantityKg: 1000, originRef: "originos:farm-ghana-1",

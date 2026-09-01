@@ -1,6 +1,6 @@
 # OriginOS
 
-OriginOS has entered **Software Sprint 1** on top of the independently reviewed SW0-RC2 kernel.
+OriginOS has entered **Software Sprint 2** on top of the independently reviewed SW0-RC2 kernel and the acceptance-tested Sprint 1 service boundary.
 
 ## Current state
 
@@ -100,3 +100,17 @@ pnpm test:conformance
 ## Canonical rule
 
 Architecture is downstream of canon. Framework, database, authentication, and deployment concepts may not define canonical identity, Authority, Agency, truth, action, or enterprise Reality.
+
+## Software Sprint 2 operator application
+
+### SW2-01 Merchant/Cocoa operator shell
+
+Start the service and open its base URL to use the responsive operator shell:
+
+```bash
+ORIGINOS_AUTH_CONFIG=./config/auth.json pnpm start:service
+```
+
+The shell establishes tested routes for Overview, Cocoa lots, Custody, Workflow, and System status. It is server rendered, keyboard navigable, mobile responsive, and composed through a replaceable web-app port. Unknown paths remain owned by the HTTP adapter and return its normal not-present response.
+
+SW2-01 intentionally does not claim transactional lot entry or browser authentication. Those controls begin in SW2-02 and must pass focused UI-to-API-to-persistence tests before the workflow expands.

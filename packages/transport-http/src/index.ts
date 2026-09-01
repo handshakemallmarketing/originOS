@@ -13,10 +13,12 @@ export interface ReceiptExecution { readonly replayed: boolean; readonly statusC
 export interface CommandReceiptStore { execute(key: string, digest: string, operation: () => Promise<Omit<ReceiptExecution, "replayed">>): Promise<ReceiptExecution> }
 export interface ReceiptStoreOptions { readonly afterOperationBeforeCommit?: () => void | Promise<void> }
 export interface TransportAuditEvent { readonly event: "command-request"; readonly principalId?: string; readonly commandId?: string; readonly commandType?: string; readonly statusCode: number; readonly replayed?: boolean; readonly outcome: string }
+export interface OriginWebApp { render(pathname: string): { readonly statusCode: number; readonly contentType: string; readonly body: string } | undefined }
 export interface OriginHttpOptions {
   readonly authenticator: RequestAuthenticator;
   readonly auditSink?: { record(event: TransportAuditEvent): Promise<void> };
   readonly readiness?: () => Promise<{ readonly ok: boolean; readonly checks: readonly unknown[] }>;
+  readonly webApp?: OriginWebApp;
 }
 
 const stable = (value: unknown): unknown => {
@@ -89,6 +91,10 @@ const statusFor = (code: CanonicalErrorCode): number => code === "C2C_E009_CONFL
 export const createOriginHttpServer = (application: OriginApplication, receipts: CommandReceiptStore, options: OriginHttpOptions): Server => createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", "http://originos.local");
+    if (request.method === "GET" && options.webApp) {
+      const page = options.webApp.render(url.pathname);
+      if (page) { response.writeHead(page.statusCode, { "content-type": page.contentType, "x-originos-api-version": apiVersion }); response.end(page.body); return; }
+    }
     if (request.method === "GET" && url.pathname === "/health") return json(response, 200, { status: "ok" });
     if (request.method === "GET" && url.pathname === "/ready") {
       const readiness = options.readiness ? await options.readiness() : { ok: true, checks: [] };
