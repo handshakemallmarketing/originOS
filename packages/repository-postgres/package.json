@@ -1,6 +1,6 @@
 {
   "name": "@originos/repository-postgres",
-  "version": "0.9.0-alpha.1",
+  "version": "0.10.0-alpha.1",
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {"@originos/canonical-types":"workspace:*","@originos/repository":"workspace:*","pg":"8.16.3"},

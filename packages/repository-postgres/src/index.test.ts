@@ -12,11 +12,24 @@ const makeRecord = (version: number): CanonicalRecord => ({
   provenance: { sourceRefs: [canonicalId("originos:test-source")], producerRef: canonicalId("originos:test-producer") },
   reason: `version ${version}`, content: { version }
 });
-const repository = async (): Promise<PostgresCanonicalRepository> => {
+const repository = async (statements?: string[]): Promise<PostgresCanonicalRepository> => {
   const database = newDb();
   database.public.registerFunction({ name: "pg_advisory_xact_lock", args: [DataType.integer], returns: DataType.bool, implementation: () => true });
   const adapter = database.adapters.createPg();
-  const result = new PostgresCanonicalRepository(new adapter.Pool() as unknown as SqlPool); await result.migrate(); return result;
+  const pool = new adapter.Pool() as unknown as SqlPool;
+  if (statements) {
+    const connect = pool.connect.bind(pool);
+    pool.connect = async () => {
+      const client = await connect();
+      const query = client.query.bind(client);
+      client.query = ((text: string, values?: readonly unknown[]) => {
+        statements.push(text);
+        return query(text, [...(values ?? [])]);
+      }) as typeof client.query;
+      return client;
+    };
+  }
+  const result = new PostgresCanonicalRepository(pool); await result.migrate(); return result;
 };
 
 describe("PostgreSQL canonical repository", () => {
@@ -25,12 +38,43 @@ describe("PostgreSQL canonical repository", () => {
     expect((await store.append({ record: makeRecord(1) })).ok).toBe(true);
     expect((await store.append({ record: makeRecord(2), expectedCurrentVersion: recordVersion(1) })).ok).toBe(true);
     expect((await store.history(canonicalId("originos:postgres-record"))).map(({ recordVersion }) => recordVersion)).toEqual([1, 2]);
-    expect(await store.check()).toEqual({ ok: true, detail: "2 canonical versions reachable" });
+    expect(await store.check()).toEqual({ ok: true, detail: "2 canonical versions and 0 committed command receipts reachable" });
     await store.close();
   });
   it("rolls back an invalid multi-record batch", async () => {
     const store = await repository();
     const result = await store.appendMany([{ record: makeRecord(1) }, { record: makeRecord(1) }]);
     expect(result.ok).toBe(false); expect(await store.all()).toHaveLength(0); await store.close();
+  });
+  it("commits the canonical batch and command receipt once, then replays the response", async () => {
+    const store = await repository();
+    const receipts = store.receiptStore();
+    let calls = 0;
+    const operation = async () => {
+      calls += 1;
+      const appended = await store.append({ record: makeRecord(1) });
+      expect(appended.ok).toBe(true);
+      return { statusCode: 200, body: { ok: true, version: 1 } };
+    };
+    const digest = "a".repeat(64);
+    expect(await receipts.execute("command-one", digest, operation)).toEqual({ replayed: false, statusCode: 200, body: { ok: true, version: 1 } });
+    expect(await receipts.execute("command-one", digest, operation)).toEqual({ replayed: true, statusCode: 200, body: { ok: true, version: 1 } });
+    expect(calls).toBe(1);
+    expect(await store.all()).toHaveLength(1);
+    expect(await store.check()).toEqual({ ok: true, detail: "1 canonical versions and 1 committed command receipts reachable" });
+    expect((await receipts.execute("command-one", "b".repeat(64), operation)).statusCode).toBe(409);
+    expect(calls).toBe(1);
+    await store.close();
+  });
+  it("issues rollback when receipt commit fails", async () => {
+    const statements: string[] = [];
+    const store = await repository(statements);
+    const receipts = store.receiptStore({ afterOperationBeforeCommit: () => { throw new Error("injected failure"); } });
+    await expect(receipts.execute("command-failure", "c".repeat(64), async () => {
+      expect((await store.append({ record: makeRecord(1) })).ok).toBe(true);
+      return { statusCode: 200, body: { ok: true } };
+    })).rejects.toThrow("injected failure");
+    expect(statements.at(-1)).toBe("ROLLBACK");
+    await store.close();
   });
 });

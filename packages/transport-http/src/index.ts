@@ -10,6 +10,7 @@ import { apiVersion, openApiDocument, validateApplicationCommandEnvelope } from 
 export interface CommandReceipt { readonly key: string; readonly requestDigest: string; readonly state: "pending" | "committed"; readonly statusCode?: number; readonly body?: unknown }
 interface ReceiptFile { readonly version: 1; readonly receipts: readonly CommandReceipt[] }
 export interface ReceiptExecution { readonly replayed: boolean; readonly statusCode: number; readonly body: unknown }
+export interface CommandReceiptStore { execute(key: string, digest: string, operation: () => Promise<Omit<ReceiptExecution, "replayed">>): Promise<ReceiptExecution> }
 export interface ReceiptStoreOptions { readonly afterOperationBeforeCommit?: () => void | Promise<void> }
 export interface TransportAuditEvent { readonly event: "command-request"; readonly principalId?: string; readonly commandId?: string; readonly commandType?: string; readonly statusCode: number; readonly replayed?: boolean; readonly outcome: string }
 export interface OriginHttpOptions {
@@ -26,7 +27,7 @@ const stable = (value: unknown): unknown => {
 };
 export const requestDigest = (value: unknown): string => createHash("sha256").update(JSON.stringify(stable(value))).digest("hex");
 
-export class JsonCommandReceiptStore {
+export class JsonCommandReceiptStore implements CommandReceiptStore {
   #receipts: Map<string, CommandReceipt> | undefined;
   #queue: Promise<unknown> = Promise.resolve();
   constructor(readonly filePath: string, readonly options: ReceiptStoreOptions = {}) {}
@@ -85,7 +86,7 @@ const readJson = async (request: IncomingMessage): Promise<unknown> => {
 };
 const statusFor = (code: CanonicalErrorCode): number => code === "C2C_E009_CONFLICT_UNRESOLVED" || code === "C2C_E010_TRANSITION_INVALID" ? 409 : code === "C2C_E005_AUTHORITY_INVALID" ? 403 : 400;
 
-export const createOriginHttpServer = (application: OriginApplication, receipts: JsonCommandReceiptStore, options: OriginHttpOptions): Server => createServer(async (request, response) => {
+export const createOriginHttpServer = (application: OriginApplication, receipts: CommandReceiptStore, options: OriginHttpOptions): Server => createServer(async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", "http://originos.local");
     if (request.method === "GET" && url.pathname === "/health") return json(response, 200, { status: "ok" });

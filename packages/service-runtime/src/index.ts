@@ -7,7 +7,7 @@ import { acquireOperationalLock, checkDataIntegrity, JsonlAuditLog } from "@orig
 import { JsonFileCanonicalRepository } from "@originos/repository";
 import type { CanonicalRepository } from "@originos/repository";
 import { PostgresCanonicalRepository } from "@originos/repository-postgres";
-import { createOriginHttpServer, JsonCommandReceiptStore } from "@originos/transport-http";
+import { createOriginHttpServer, JsonCommandReceiptStore, type CommandReceiptStore } from "@originos/transport-http";
 
 export interface ServiceConfig { readonly host: string; readonly port: number; readonly dataDirectory: string; readonly authConfigPath: string; readonly databaseUrl?: string }
 export interface OriginService {
@@ -49,13 +49,14 @@ export const startOriginService = async (config: ServiceConfig): Promise<OriginS
   } else repository = new JsonFileCanonicalRepository(join(config.dataDirectory, "canonical-store.json"));
   const application = new OriginApplication(repository);
   const auditLog = new JsonlAuditLog(join(config.dataDirectory, "audit-log.jsonl"));
-  const server = createOriginHttpServer(application, new JsonCommandReceiptStore(join(config.dataDirectory, "command-receipts.json")), {
+  const receiptStore: CommandReceiptStore = postgres?.receiptStore() ?? new JsonCommandReceiptStore(join(config.dataDirectory, "command-receipts.json"));
+  const server = createOriginHttpServer(application, receiptStore, {
     authenticator, auditSink: auditLog, readiness: async () => {
       const fileIntegrity = await checkDataIntegrity(config.dataDirectory);
       if (!postgres) return fileIntegrity;
       const database = await postgres.check();
       const fileChecks = fileIntegrity.checks.filter((check) => check.name !== "canonical-store");
-      return { ok: fileChecks.every((check) => check.ok) && database.ok, checks: [...fileChecks, { name: "postgresql-canonical-store", ...database }] };
+      return { ok: fileChecks.every((check) => check.ok) && database.ok, checks: [...fileChecks, { name: "postgresql-transaction-store", ...database }] };
     }
   });
   try { await new Promise<void>((resolveListen, reject) => {

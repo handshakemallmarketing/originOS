@@ -26,6 +26,7 @@ Formal decision: GO for the bounded Sprint 0 kernel profile; NO-GO for productio
 - Durable command receipts with request-digest conflict detection and restart-safe idempotent replay.
 - Atomic multi-record repository batches and write-ahead receipt recovery close the SW1-02 crash window for the single-process JSON alpha.
 - Optional PostgreSQL canonical repository with serializable batch transactions, immutable JSONB history, and database-level writer coordination.
+- PostgreSQL command receipts committed in the same serializable transaction as canonical writes and the stored HTTP response.
 
 ### SW1-07 authenticated HTTP surface
 
@@ -69,7 +70,7 @@ pnpm ops restore ./backups/originos-backup.json ./data/originos
 
 Restore verifies all backup hashes, swaps the complete managed data directory, and reports the preserved pre-restore rollback directory. Audit entries contain command identity/type and outcome metadata, not request payloads or canonical records.
 
-### SW1-08 PostgreSQL persistence
+### SW1-09 unified PostgreSQL command transaction
 
 Set `ORIGINOS_DATABASE_URL` to select PostgreSQL canonical persistence. Without it, the service retains the JSON reference adapter.
 
@@ -80,9 +81,11 @@ ORIGINOS_DATA_DIR=./data/originos \
 pnpm start:service
 ```
 
-Startup creates the bounded canonical table and index when absent. `/ready` checks database reachability and canonical-version count. PostgreSQL deployments must use database-native encrypted backup, restore, credential, TLS, monitoring, and migration controls; `pnpm ops backup` covers only the local JSON-mode operational files and must not be represented as a PostgreSQL backup.
+Startup creates the bounded canonical and command-receipt tables and canonical index when absent. In PostgreSQL mode, receipt reservation, application reads, canonical batch writes, and the committed HTTP response use one checked-out client and one serializable transaction. A repeated request with the same key and digest replays the stored response; reuse with a different digest returns conflict without executing the command. `/ready` checks database reachability plus canonical-version and committed-receipt counts.
 
-This remains an application alpha. Static API keys do not supply TLS, OAuth/OIDC, automatic key rotation, user administration, or production-grade authorization. PostgreSQL batch transactions do not yet make the separate JSON command-receipt file and canonical database one atomic unit.
+PostgreSQL deployments must use database-native encrypted backup, restore, credential, TLS, monitoring, and migration controls; `pnpm ops backup` covers only the local JSON-mode operational files and must not be represented as a PostgreSQL backup. JSON mode remains an explicitly single-process reference adapter and retains its write-ahead recovery behavior.
+
+This remains an application alpha. Static API keys do not supply TLS, OAuth/OIDC, automatic key rotation, user administration, or production-grade authorization. The audit log is deliberately outside the canonical command transaction, and a live PostgreSQL failure-injection/recovery gate is still required before any production or horizontal-processing claim.
 
 ## Commands
 
