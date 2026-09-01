@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCocoaLotEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
+import { createCocoaLotEnvelope, createCustodyTransferEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
 describe("SW2-01 Merchant/Cocoa operator shell", () => {
   it("renders every declared route with one active navigation item", () => {
     expect(operatorRoutes.map(({ path }) => path)).toEqual(["/", "/lots", "/transfers", "/workflow", "/system"]);
@@ -18,6 +18,15 @@ describe("SW2-01 Merchant/Cocoa operator shell", () => {
     const page = renderOperatorPage("/lots")!.body;
     for (const field of ["apiKey", "lotId", "quantityKg", "originRef", "custodianRef", "agentRef", "agencyRef", "authorityRef", "purposeRef", "evidenceRef", "attributionRule"]) expect(page).toContain(`name="${field}"`);
     expect(page).toContain('autocomplete="current-password"'); expect(page).toContain('fetch("/v2/commands"'); expect(page).toContain('fetch("/v2/records"');
+    expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
+  });
+  it("maps a selected persisted lot to one custody-transfer command", () => {
+    expect(createCustodyTransferEnvelope({ transferId: "GH-TRANSFER-001", lotRef: "originos:material-lot-GH-2026-001", fromCustodianRef: "originos:warehouse-1", toCustodianRef: "originos:processor-1", quantityKg: 1250.5, agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-receipt", attributionRule: "originos:attribution-direct-agent" })).toEqual({
+      commandId: "operator-GH-TRANSFER-001", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRefs: ["originos:evidence-cocoa-receipt"], attributionRule: "originos:attribution-direct-agent", command: { commandType: "transferCustody", payload: { transferId: "GH-TRANSFER-001", lotRef: "originos:material-lot-GH-2026-001", fromCustodianRef: "originos:warehouse-1", toCustodianRef: "originos:processor-1", quantityKg: 1250.5 } }
+    });
+    const page = renderOperatorPage("/transfers")!.body;
+    for (const field of ["apiKey", "lotRef", "transferId", "quantityKg", "fromCustodianRef", "toCustodianRef", "agentRef", "agencyRef", "authorityRef", "purposeRef", "evidenceRef", "attributionRule"]) expect(page).toContain(`name="${field}"`);
+    expect(page).toContain("Load eligible lots"); expect(page).toContain('commandType:"transferCustody"'); expect(page).toContain('fetch("/v2/records"');
     expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
   });
 });

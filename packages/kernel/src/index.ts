@@ -26,6 +26,9 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
     return { ok: true, value: { created: [stale], superseded: [], facts: [{ recordType: "computation-result", status: "stale" }] } };
   }
   if (command.commandType === "registerCocoaLot") {
+    if (typeof command.payload.quantityKg !== "number" || !Number.isFinite(command.payload.quantityKg) || command.payload.quantityKg <= 0) {
+      return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Cocoa-lot quantity must be a positive finite number") };
+    }
     const lot = foundationRecord("material-lot", "known", {
       fixtureId: command.payload.lotId, material: "cocoa", quantityKg: command.payload.quantityKg,
       originRef: command.payload.originRef, custodianRef: command.payload.custodianRef,
@@ -34,6 +37,22 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
     return { ok: true, value: { created: [lot], superseded: [], facts: [{ recordType: "material-lot", quantityKg: command.payload.quantityKg }] } };
   }
   if (command.commandType === "transferCustody") {
+    const lotRef = command.payload.lotRef;
+    const lot = typeof lotRef === "string" ? records.filter((record) => record.canonicalId === lotRef && record.canonicalType === "material-lot").at(-1) : undefined;
+    if (!lot) return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Custody transfer requires an existing material lot", [], { lotRef }) };
+    const lotContent = lot.content as Readonly<Record<string, unknown>>;
+    const priorTransfers = records.filter((record) => record.canonicalType === "custody-transfer" && (record.content as Readonly<Record<string, unknown>>).lotRef === lotRef);
+    const lastTransfer = priorTransfers.at(-1)?.content as Readonly<Record<string, unknown>> | undefined;
+    const currentCustodianRef = lastTransfer?.toCustodianRef ?? lotContent.custodianRef;
+    if (command.payload.fromCustodianRef !== currentCustodianRef) {
+      return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Transferor is not the lot's current custodian", [], { lotRef, currentCustodianRef, supplied: command.payload.fromCustodianRef }) };
+    }
+    if (typeof command.payload.quantityKg !== "number" || !Number.isFinite(command.payload.quantityKg) || command.payload.quantityKg !== lotContent.quantityKg) {
+      return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Custody transfer must conserve the complete measured lot quantity", [], { lotRef, lotQuantityKg: lotContent.quantityKg, supplied: command.payload.quantityKg }) };
+    }
+    if (typeof command.payload.toCustodianRef !== "string" || command.payload.toCustodianRef === currentCustodianRef) {
+      return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Custody transfer requires a distinct receiving custodian", [], { lotRef, currentCustodianRef }) };
+    }
     const transfer = foundationRecord("custody-transfer", "known", {
       fixtureId: command.payload.transferId, lotRef: command.payload.lotRef,
       fromCustodianRef: command.payload.fromCustodianRef, toCustodianRef: command.payload.toCustodianRef,

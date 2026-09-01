@@ -3,4 +3,4 @@ import { installGracefulShutdown, loadServiceConfig, startOriginService } from "
 const config = loadServiceConfig(process.env);
 const service = await startOriginService(config);
 installGracefulShutdown(service);
-console.log(JSON.stringify({ event: "originos.service.started", baseUrl: service.baseUrl, dataDirectory: config.dataDirectory, storage: config.databaseUrl ? "postgresql" : "json", version: "0.12.0-alpha.1", apiVersion: "2.0.0" }));
+console.log(JSON.stringify({ event: "originos.service.started", baseUrl: service.baseUrl, dataDirectory: config.dataDirectory, storage: config.databaseUrl ? "postgresql" : "json", version: "0.13.0-alpha.1", apiVersion: "2.0.0" }));

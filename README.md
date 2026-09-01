@@ -120,3 +120,9 @@ SW2-01 intentionally does not claim transactional lot entry or browser authentic
 The Cocoa Lots route now provides the first end-to-end operator transaction. An operator enters the lot reference, positive quantity, origin, custodian, Agent, Agency, Authority, Purpose, evidence, and attribution rule. The page submits one authenticated `registerCocoaLot` command through API v2 and then reloads persisted `material-lot` records.
 
 The API key is held only in the active page's JavaScript memory. It is not inserted into the document, written to local or session storage, placed in a URL, or retained after page navigation or reload. The field is cleared after successful registration. This is a bounded alpha authentication experience, not a production browser session system.
+
+### SW2-03 conserved custody transfer
+
+The Custody route loads persisted material lots and their custody history after operator authentication. Selecting a lot derives its complete measured quantity and current custodian; these values are read-only in the transfer form. A successful transfer is submitted through API v2 and reloaded from canonical persistence.
+
+The kernel now rejects custody transfer when the lot is absent, the sender is not the current custodian, the receiver equals the current custodian, or the quantity differs from the complete measured lot quantity. Current custody is derived from the material lot followed by its ordered custody events, so a former custodian cannot transfer the lot again after a valid handoff.
