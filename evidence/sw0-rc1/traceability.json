@@ -1,0 +1,7 @@
+{
+  "baseline": ["CBR-01-v1.0", "C2C-01-v1.0", "SW0-01-v1.0"],
+  "fixtureMapping": "docs/traceability/matrix.json",
+  "mappedFixtures": 15,
+  "greenFixtures": 15,
+  "unmappedActivatedRequirements": 0
+}

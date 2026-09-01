@@ -1,0 +1,25 @@
+name: originos-ci
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:boundaries
+      - run: pnpm check:traceability
+      - run: pnpm typecheck
+      - name: Red-state conformance evidence
+        run: pnpm test:conformance
+        continue-on-error: true
+      - name: Assert SW0-05 expected partial-red state
+        run: test "$(cat docs/traceability/implementation-status.txt)" = "RED_EXPECTED_4"

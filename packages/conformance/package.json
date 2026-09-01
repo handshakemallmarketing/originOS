@@ -1,0 +1,8 @@
+{
+  "name":"@originos/conformance",
+  "version":"0.1.0-rc.2",
+  "type":"module",
+  "exports":"./src/index.ts",
+  "dependencies":{"@originos/canonical-types":"workspace:*","@originos/kernel":"workspace:*"},
+  "scripts":{"build":"tsc -p tsconfig.json","typecheck":"tsc -p tsconfig.json --noEmit","test":"vitest run --reporter=verbose"}
+}

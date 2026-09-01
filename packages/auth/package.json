@@ -1,0 +1,1 @@
+{"name":"@originos/auth","version":"0.8.0-alpha.1","type":"module","exports":"./src/index.ts","scripts":{"build":"tsc -p tsconfig.json","typecheck":"tsc -p tsconfig.json --noEmit","test":"vitest run --passWithNoTests"}}

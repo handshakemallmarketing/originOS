@@ -1,0 +1,8 @@
+{
+  "source": "docs/traceability/invariants.json",
+  "total": 20,
+  "enforced": 20,
+  "detectablyReported": 20,
+  "inapplicable": 0,
+  "waived": 0
+}

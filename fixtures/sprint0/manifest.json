@@ -1,0 +1,12 @@
+{
+  "profile": "OriginOS-Software-Sprint-0",
+  "document": "C2C-01-v1.0",
+  "state": "sw0-rc1-green",
+  "expectedImplemented": 15,
+  "fixtures": [
+    "S0-M01","S0-M02","S0-M03","S0-M04","S0-M05",
+    "S0-C01","S0-C02","S0-C03","S0-C04","S0-C05",
+    "S0-X01","S0-X02","S0-X03","S0-X04","S0-X05"
+  ],
+  "prohibition": "Do not weaken positive or negative assertions to make a fixture green."
+}

@@ -1,0 +1,12 @@
+{
+  "mechanism": "canonical JSON export/import comparator",
+  "identityPreserved": true,
+  "versionPreserved": true,
+  "statusPreserved": true,
+  "provenancePreserved": true,
+  "relationsPreserved": true,
+  "uncertaintyPreserved": true,
+  "historyPreserved": true,
+  "semanticEquivalent": true,
+  "rollback": "original immutable history remains authoritative and unchanged"
+}

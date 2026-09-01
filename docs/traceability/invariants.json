@@ -1,0 +1,26 @@
+{
+  "document": "C2C-01H",
+  "profile": "OriginOS-Software-Sprint-0",
+  "invariants": [
+    {"id":"C2C-INV-001","evidence":"runtime-validator+import-validation","disposition":"enforced"},
+    {"id":"C2C-INV-002","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-003","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-004","evidence":"S0-M02+S0-M05","disposition":"enforced"},
+    {"id":"C2C-INV-005","evidence":"S0-C02-negative-assertion","disposition":"enforced"},
+    {"id":"C2C-INV-006","evidence":"S0-M01-negative-assertion","disposition":"enforced"},
+    {"id":"C2C-INV-007","evidence":"S0-M03-negative-assertion","disposition":"enforced"},
+    {"id":"C2C-INV-008","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-009","evidence":"S0-M04+S0-C01+runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-010","evidence":"S0-C03-negative-assertion","disposition":"enforced"},
+    {"id":"C2C-INV-011","evidence":"S0-C04","disposition":"enforced"},
+    {"id":"C2C-INV-012","evidence":"S0-C05+runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-013","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-014","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-015","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-016","evidence":"runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-017","evidence":"S0-X03+runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-018","evidence":"S0-X04+runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-019","evidence":"S0-X01+runtime-validator","disposition":"enforced"},
+    {"id":"C2C-INV-020","evidence":"S0-X05+repository-roundtrip-tests","disposition":"enforced"}
+  ]
+}

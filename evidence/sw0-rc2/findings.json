@@ -1,0 +1,9 @@
+{
+  "reviewTarget": "SW0-RC1@a5febe9",
+  "findings": [
+    {"id":"F-001","class":"defect","severity":"blocking","summary":"S0-X05 returned a constant success fact","disposition":"fixed","evidence":"kernel invokes export/import/comparator"},
+    {"id":"F-002","class":"defect","severity":"blocking","summary":"20-invariant release claim was not audit-checked","disposition":"fixed","evidence":"20-row traceability plus executable audit"},
+    {"id":"F-003","class":"defect","severity":"blocking","summary":"Internal E015 occupied canonical error namespace","disposition":"fixed","evidence":"exact E001-E014 catalogue and test"}
+  ],
+  "openBlockingFindings": 0
+}

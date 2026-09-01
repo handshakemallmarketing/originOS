@@ -1,0 +1,5 @@
+{
+  "version": "0.1.0-rc.1",
+  "source": "packages/schemas/src/index.ts",
+  "schemas": ["canonical-record-envelope", "canonical-error", "canonical-bundle", "computation-result", "decision", "delegation", "act", "transformation", "transformation-event", "outcome", "consequence", "value-status", "conformance-fixture"]
+}

@@ -1,0 +1,9 @@
+{
+  "release": "SW0-RC1",
+  "version": "0.1.0-rc.1",
+  "profile": "OriginOS-Software-Sprint-0",
+  "canon": ["CBR-01-v1.0", "C2C-01-v1.0", "SW0-01-v1.0"],
+  "productionRelease": false,
+  "fixtureCount": 15,
+  "evidenceComplete": true
+}

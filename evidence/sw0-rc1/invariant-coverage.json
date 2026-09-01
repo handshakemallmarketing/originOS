@@ -1,0 +1,6 @@
+{
+  "profileInvariantCount": 20,
+  "implementedValidators": ["C2C-INV-001", "C2C-INV-002", "C2C-INV-009", "C2C-INV-012", "C2C-INV-017", "C2C-INV-018", "C2C-INV-019"],
+  "fixtureExercised": ["C2C-INV-004", "C2C-INV-005", "C2C-INV-006", "C2C-INV-007", "C2C-INV-009", "C2C-INV-010", "C2C-INV-011", "C2C-INV-012", "C2C-INV-017", "C2C-INV-018", "C2C-INV-019", "C2C-INV-020"],
+  "claim": "Coverage identifies executable validators and fixture evidence; it does not claim every invariant has a standalone validator."
+}

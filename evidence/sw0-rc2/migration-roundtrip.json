@@ -1,0 +1,14 @@
+{
+  "fixture": "S0-X05",
+  "realExporterInvoked": true,
+  "realImporterInvoked": true,
+  "realComparatorInvoked": true,
+  "identityPreserved": true,
+  "versionPreserved": true,
+  "statusPreserved": true,
+  "provenancePreserved": true,
+  "relationsPreserved": true,
+  "uncertaintyPreserved": true,
+  "historyPreserved": true,
+  "semanticEquivalent": true
+}

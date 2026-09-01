@@ -1,0 +1,9 @@
+{
+  "name": "@originos/repository-postgres",
+  "version": "0.9.0-alpha.1",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {"@originos/canonical-types":"workspace:*","@originos/repository":"workspace:*","pg":"8.16.3"},
+  "devDependencies": {"@types/pg":"8.15.5","pg-mem":"3.0.5"},
+  "scripts": {"build":"tsc -p tsconfig.json","typecheck":"tsc -p tsconfig.json --noEmit","test":"vitest run --passWithNoTests"}
+}

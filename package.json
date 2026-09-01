@@ -1,0 +1,25 @@
+{
+  "name": "originos",
+  "version": "0.9.0-alpha.1",
+  "private": true,
+  "packageManager": "pnpm@11.19.0",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:conformance": "pnpm --filter @originos/conformance test",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:traceability": "node scripts/check-traceability.mjs",
+    "check:release": "node scripts/check-release-evidence.mjs",
+    "check": "pnpm check:boundaries && pnpm check:traceability && pnpm check:release && pnpm typecheck && pnpm test",
+    "start:service": "pnpm build && node packages/service-runtime/dist/service.js",
+    "ops": "pnpm --filter @originos/operations build && node packages/operations/dist/operations.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.0",
+    "esbuild": "0.28.2",
+    "typescript": "5.9.2",
+    "vitest": "3.2.4"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "document": "SW0-02",
+  "baseline": ["CBR-01-v1.0", "C2C-01-v1.0", "SW0-01-v1.0"],
+  "fixtures": [
+    {"id":"S0-M01","c2c":["C2C-INV-006"],"status":"green-sw0-04"},
+    {"id":"S0-M02","c2c":["C2C-INV-004"],"status":"green-sw0-04"},
+    {"id":"S0-M03","c2c":["C2C-INV-007"],"status":"green-sw0-04"},
+    {"id":"S0-M04","c2c":["C2C-INV-009"],"status":"green-sw0-05"},
+    {"id":"S0-M05","c2c":["C2C-INV-004","C2C-E005"],"status":"green-sw0-05"},
+    {"id":"S0-C01","c2c":["C2C-INV-009"],"status":"green-sw0-06"},
+    {"id":"S0-C02","c2c":["C2C-INV-005"],"status":"green-sw0-04"},
+    {"id":"S0-C03","c2c":["C2C-INV-010"],"status":"green-sw0-06"},
+    {"id":"S0-C04","c2c":["C2C-INV-011"],"status":"green-sw0-06"},
+    {"id":"S0-C05","c2c":["C2C-INV-012"],"status":"green-sw0-06"},
+    {"id":"S0-X01","c2c":["C2C-INV-019","C2C-ST-01"],"status":"green-sw0-03"},
+    {"id":"S0-X02","c2c":["C2C-E007"],"status":"green-sw0-03"},
+    {"id":"S0-X03","c2c":["C2C-INV-017"],"status":"green-sw0-05"},
+    {"id":"S0-X04","c2c":["C2C-INV-018"],"status":"green-sw0-03"},
+    {"id":"S0-X05","c2c":["C2C-INV-020"],"status":"green-sw0-03"}
+  ]
+}

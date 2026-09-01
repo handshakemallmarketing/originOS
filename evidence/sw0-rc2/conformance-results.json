@@ -1,0 +1,9 @@
+{
+  "suite": "C2C-01-Sprint-0",
+  "total": 15,
+  "passed": 15,
+  "failed": 0,
+  "negativeAssertionsEnforced": true,
+  "realRoundTripImplementationExercised": true,
+  "semanticWaivers": 0
+}

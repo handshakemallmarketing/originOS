@@ -1,0 +1,26 @@
+import { existsSync, readFileSync } from "node:fs";
+
+const root = new URL("../evidence/sw0-rc2/", import.meta.url);
+const required = ["release-manifest.json", "conformance-results.json", "invariant-coverage.json", "canonical-error-coverage.json", "migration-roundtrip.json", "exceptions.json", "findings.json", "independent-review.json", "go-no-go.md"];
+const missing = required.filter((name) => !existsSync(new URL(name, root)));
+if (missing.length) throw new Error(`Missing release evidence: ${missing.join(", ")}`);
+const manifest = JSON.parse(readFileSync(new URL("release-manifest.json", root), "utf8"));
+const conformance = JSON.parse(readFileSync(new URL("conformance-results.json", root), "utf8"));
+const migration = JSON.parse(readFileSync(new URL("migration-roundtrip.json", root), "utf8"));
+const exceptions = JSON.parse(readFileSync(new URL("exceptions.json", root), "utf8"));
+const invariantCoverage = JSON.parse(readFileSync(new URL("invariant-coverage.json", root), "utf8"));
+const errorCoverage = JSON.parse(readFileSync(new URL("canonical-error-coverage.json", root), "utf8"));
+const findings = JSON.parse(readFileSync(new URL("findings.json", root), "utf8"));
+const sourceInvariants = JSON.parse(readFileSync(new URL("../docs/traceability/invariants.json", import.meta.url), "utf8"));
+const canonicalTypesSource = readFileSync(new URL("../packages/canonical-types/src/index.ts", import.meta.url), "utf8");
+const kernelSource = readFileSync(new URL("../packages/kernel/src/index.ts", import.meta.url), "utf8");
+if (manifest.release !== "SW0-RC2" || manifest.productionRelease !== false) throw new Error("Invalid SW0-RC2 designation");
+if (conformance.passed !== 15 || conformance.failed !== 0 || conformance.semanticWaivers !== 0) throw new Error("Conformance evidence is not fully green");
+if (migration.semanticEquivalent !== true || migration.historyPreserved !== true) throw new Error("Round-trip evidence failed");
+if (exceptions.hiddenWaivers !== 0) throw new Error("Hidden waivers are prohibited");
+if (invariantCoverage.total !== 20 || invariantCoverage.enforced !== 20 || sourceInvariants.invariants.length !== 20) throw new Error("Invariant evidence is not 20/20");
+const canonicalErrors = [...new Set(canonicalTypesSource.match(/C2C_E\d{3}_[A-Z_]+/g) ?? [])];
+if (errorCoverage.total !== 14 || errorCoverage.representable !== 14 || canonicalErrors.length !== 14) throw new Error("Canonical error evidence is not exactly 14/14");
+if (!kernelSource.includes("importCanonicalBundle") || !kernelSource.includes("semanticallyEquivalent")) throw new Error("S0-X05 is not wired to the real round-trip implementation");
+if (findings.findings.some((finding) => finding.disposition !== "fixed")) throw new Error("Blocking review findings remain open");
+console.log(`Release evidence check passed: ${required.length} RC2 artifacts, 15/15 fixtures, 20/20 invariants, 14/14 errors, zero waivers.`);

@@ -1,0 +1,6 @@
+{
+  "hiddenWaivers": 0,
+  "semanticWaivers": [],
+  "approvedProfileInapplicability": [],
+  "quarantinedNonblocking": ["PostgreSQL adapter", "production operational/security/quality closure"]
+}

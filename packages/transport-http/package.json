@@ -1,0 +1,14 @@
+{
+  "name": "@originos/transport-http",
+  "version": "0.8.0-alpha.1",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@originos/application": "workspace:*",
+    "@originos/auth": "workspace:*",
+    "@originos/canonical-types": "workspace:*",
+    "@originos/repository": "workspace:*",
+    "@originos/schemas": "workspace:*"
+  },
+  "scripts": {"build":"tsc -p tsconfig.json","typecheck":"tsc -p tsconfig.json --noEmit","test":"vitest run --passWithNoTests"}
+}

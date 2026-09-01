@@ -1,0 +1,8 @@
+{
+  "hiddenWaivers": 0,
+  "semanticWaivers": [],
+  "quarantined": [
+    {"item": "PostgreSQL adapter", "reason": "Stretch item; cannot block semantic kernel RC"},
+    {"item": "Production operations and security closure", "reason": "Gated to later R1/R2 release work"}
+  ]
+}

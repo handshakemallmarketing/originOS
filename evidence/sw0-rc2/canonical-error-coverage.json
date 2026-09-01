@@ -1,0 +1,7 @@
+{
+  "source": "packages/canonical-types/src/index.ts",
+  "contractRange": "C2C-E001–C2C-E014",
+  "total": 14,
+  "representable": 14,
+  "noncanonicalErrorsInCanonicalNamespace": 0
+}

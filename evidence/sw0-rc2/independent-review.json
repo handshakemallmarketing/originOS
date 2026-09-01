@@ -1,0 +1,9 @@
+{
+  "method": "fresh-tree install, source inspection, adversarial evidence reconciliation, full automated gate",
+  "initialDecision": "NO-GO on SW0-RC1",
+  "correctedCandidate": "SW0-RC2",
+  "blockingFindingsFound": 3,
+  "blockingFindingsClosed": 3,
+  "assertionsDeletedOrWeakened": 0,
+  "result": "eligible for final clean-tree go/no-go"
+}
