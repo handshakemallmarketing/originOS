@@ -132,3 +132,9 @@ The kernel now rejects custody transfer when the lot is absent, the sender is no
 The Workflow route loads persisted cocoa lots and derives each lot's current custodian. An operator can initiate processing only when the selected processor currently holds the lot. One authenticated API v2 command creates a linked merchant Decision, attributable and authorized Act, and initiated Transformation in a single repository append, preventing a partially recorded initiation.
 
 The kernel rejects absent lots, processor/custodian mismatch, missing Agent, Agency, or Authority, and a second processing initiation for the same lot. This slice records initiation only: processing completion, Outcome, Consequence, and Value realization remain subsequent, separately accepted operations.
+
+### SW2-05 atomic processing completion
+
+The Workflow route now loads initiated Transformations that do not yet have a Completion. The operator records processed output mass, acceptance, and an operational consequence through one authenticated command. The kernel atomically persists a Completion, its Outcome, and the resulting Consequence.
+
+Completion is rejected unless the Transformation was initiated, the initiating processor still holds the lot, output mass is positive and no greater than input mass, and no prior Completion exists. The recorded yield remains operational evidence; it does not yet create a new processed-material lot or assert Value realization.

@@ -82,6 +82,26 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
     const transformation = foundationRecord("transformation", "known", { fixtureId: `${String(workflowId)}-transformation`, workflowId, lotRef, processorRef, change: "raw-cocoa-to-processed-cocoa", causeKind: "agentic", agencyRef, actionRef, initiationStatus: "initiated" });
     return { ok: true, value: { created: [decision, act, transformation], superseded: [], facts: [{ recordType: "decision" }, { recordType: "act" }, { recordType: "transformation", status: "initiated" }] } };
   }
+  if (command.commandType === "completeCocoaProcessing") {
+    const { completionId, transformationRef, processorRef, outputQuantityKg, accepted, consequence } = command.payload;
+    const transformation = typeof transformationRef === "string" ? records.filter((record) => record.canonicalId === transformationRef && record.canonicalType === "transformation").at(-1) : undefined;
+    const transformationContent = transformation?.content as Readonly<Record<string, unknown>> | undefined;
+    if (!transformation || transformationContent?.initiationStatus !== "initiated") return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Processing completion requires an initiated cocoa Transformation", [], { transformationRef }) };
+    if (transformationContent.processorRef !== processorRef) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Only the initiating processor may complete this Transformation", [], { transformationRef, expectedProcessorRef: transformationContent.processorRef, processorRef }) };
+    const state = materialLotState(records, transformationContent.lotRef);
+    if (!state || state.currentCustodianRef !== processorRef) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "The processor must retain current custody at completion", [], { transformationRef, currentCustodianRef: state?.currentCustodianRef, processorRef }) };
+    const inputQuantityKg = (state.lot.content as Readonly<Record<string, unknown>>).quantityKg;
+    if (typeof outputQuantityKg !== "number" || !Number.isFinite(outputQuantityKg) || outputQuantityKg <= 0 || typeof inputQuantityKg !== "number" || outputQuantityKg > inputQuantityKg) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Processed output must be positive and cannot exceed the input lot quantity", [], { transformationRef, inputQuantityKg, outputQuantityKg }) };
+    if (typeof accepted !== "boolean" || typeof consequence !== "string" || consequence.trim() === "") return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Processing completion requires an explicit acceptance result and consequence", [], { transformationRef }) };
+    const alreadyCompleted = records.some((record) => record.canonicalType === "completion" && (record.content as Readonly<Record<string, unknown>>).transformationRef === transformationRef);
+    if (alreadyCompleted) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "This Transformation is already complete", [], { transformationRef }) };
+    const completionRef = `originos:completion-${String(completionId)}`;
+    const outcomeRef = `originos:outcome-${String(completionId)}-outcome`;
+    const completion = foundationRecord("completion", "known", { fixtureId: completionId, workflowId: transformationContent.workflowId, transformationRef, lotRef: transformationContent.lotRef, processorRef, inputQuantityKg, outputQuantityKg, yieldPercent: outputQuantityKg / inputQuantityKg * 100, completionStatus: "completed" });
+    const outcome = foundationRecord("outcome", accepted === true ? "known" : "rejected", { fixtureId: `${String(completionId)}-outcome`, workflowId: transformationContent.workflowId, transformationRef, completionRef, accepted, result: accepted === true ? "processed-cocoa-accepted" : "processed-cocoa-rejected" });
+    const consequenceRecord = foundationRecord("consequence", "known", { fixtureId: `${String(completionId)}-consequence`, workflowId: transformationContent.workflowId, transformationRef, outcomeRef, effect: consequence });
+    return { ok: true, value: { created: [completion, outcome, consequenceRecord], superseded: [], facts: [{ recordType: "completion", status: "completed" }, { recordType: "outcome", accepted }, { recordType: "consequence", effect: consequence }] } };
+  }
   if (command.commandType === "compareCandidates") {
     const comparison = foundationRecord("comparison-result", "known", {
       fixtureId: command.payload.fixtureId, family: "COMPARISON", candidates: command.payload.candidates,

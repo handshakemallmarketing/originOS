@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { cocoaWorkflowCommands } from "@originos/application";
 import { hashApiKey } from "@originos/auth";
 import { checkDataIntegrity, createOperationalBackup, restoreOperationalBackup } from "@originos/operations";
-import { createCocoaLotEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope } from "@originos/operator-web";
+import { createCocoaLotEnvelope, createCocoaProcessingCompletionEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope } from "@originos/operator-web";
 import { loadServiceConfig, startOriginService, type OriginService } from "./index.js";
 
 const closeQuietly = async (service: OriginService | undefined): Promise<void> => { if (service) await service.close(); };
@@ -54,6 +54,11 @@ describe("SW1-04 service runtime", () => {
       expect(browserProcessingResponse.status).toBe(201);
       const persistedBrowserProcessing = await fetch(`${service.baseUrl}/v2/records/originos%3Atransformation-ui-browser-processing-transformation`, { headers: authHeaders }).then((response) => response.json()) as { ok: boolean; value: { content: { lotRef: string; processorRef: string; initiationStatus: string } } };
       expect(persistedBrowserProcessing).toMatchObject({ ok: true, value: { content: { lotRef: "originos:material-lot-ui-browser-lot", processorRef: "originos:processor-1", initiationStatus: "initiated" } } });
+      const browserCompletion = createCocoaProcessingCompletionEnvelope({ completionId: "ui-browser-completion", transformationRef: "originos:transformation-ui-browser-processing-transformation", processorRef: "originos:processor-1", outputQuantityKg: 700, accepted: true, consequence: "processing-yield-recorded", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-processing-report", attributionRule: "originos:attribution-direct-agent" });
+      const browserCompletionResponse = await fetch(`${service.baseUrl}/v2/commands`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": browserCompletion.commandId }, body: JSON.stringify(browserCompletion) });
+      expect(browserCompletionResponse.status).toBe(201);
+      const persistedBrowserCompletion = await fetch(`${service.baseUrl}/v2/records/originos%3Acompletion-ui-browser-completion`, { headers: authHeaders }).then((response) => response.json()) as { ok: boolean; value: { content: { transformationRef: string; outputQuantityKg: number; yieldPercent: number; completionStatus: string } } };
+      expect(persistedBrowserCompletion).toMatchObject({ ok: true, value: { content: { transformationRef: "originos:transformation-ui-browser-processing-transformation", outputQuantityKg: 700, yieldPercent: 700 / 750 * 100, completionStatus: "completed" } } });
       const commands = cocoaWorkflowCommands({
         runId: "api-cocoa", quantityKg: 1000, originRef: "originos:farm-ghana-1",
         merchantRef: "originos:merchant-1", warehouseRef: "originos:warehouse-1", processorRef: "originos:processor-1"
@@ -66,16 +71,16 @@ describe("SW1-04 service runtime", () => {
       }
       expect((await fetch(`${service.baseUrl}/v2/records`)).status).toBe(401);
       const before = await fetch(`${service.baseUrl}/v2/records`, { headers: authHeaders }).then((response) => response.json()) as { records: Array<{ canonicalType: string }> };
-      expect(before.records).toHaveLength(16);
+      expect(before.records).toHaveLength(19);
       expect(before.records.map((record) => record.canonicalType)).toEqual([
-        "material-lot", "custody-transfer", "decision", "act", "transformation", "material-lot", "custody-transfer", "comparison-result", "decision", "act", "transformation",
+        "material-lot", "custody-transfer", "decision", "act", "transformation", "completion", "outcome", "consequence", "material-lot", "custody-transfer", "comparison-result", "decision", "act", "transformation",
         "completion", "outcome", "consequence", "outcome", "value-status"
       ]);
       await service.close(); service = undefined;
 
       const integrity = await checkDataIntegrity(dataDirectory);
       expect(integrity.ok).toBe(true);
-      expect(integrity.checks.find((check) => check.name === "audit-log")?.detail).toBe("11 chained entries verified");
+      expect(integrity.checks.find((check) => check.name === "audit-log")?.detail).toBe("12 chained entries verified");
       const audit = await readFile(join(dataDirectory, "audit-log.jsonl"), "utf8");
       expect(audit).not.toContain(apiKey); expect(audit).not.toContain("originos:farm-ghana-1"); expect(audit).toContain("cocoa-operator");
       await createOperationalBackup(dataDirectory, backupPath, new Date("2026-09-01T02:00:00Z"));
@@ -87,12 +92,12 @@ describe("SW1-04 service runtime", () => {
 
       service = await startOriginService(config);
       const after = await fetch(`${service.baseUrl}/v2/records`, { headers: authHeaders }).then((response) => response.json()) as { records: unknown[] };
-      expect(after.records).toHaveLength(16);
+      expect(after.records).toHaveLength(19);
       const replay = await fetch(`${service.baseUrl}/v2/commands`, {
         method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": commands[0]!.commandId }, body: JSON.stringify(commands[0])
       });
       expect(replay.headers.get("idempotency-replayed")).toBe("true");
-      expect(await service.application.all()).toHaveLength(16);
+      expect(await service.application.all()).toHaveLength(19);
     } finally { await closeQuietly(service); }
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCocoaLotEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
+import { createCocoaLotEnvelope, createCocoaProcessingCompletionEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
 describe("SW2-01 Merchant/Cocoa operator shell", () => {
   it("renders every declared route with one active navigation item", () => {
     expect(operatorRoutes.map(({ path }) => path)).toEqual(["/", "/lots", "/transfers", "/workflow", "/system"]);
@@ -36,6 +36,15 @@ describe("SW2-01 Merchant/Cocoa operator shell", () => {
     const page = renderOperatorPage("/workflow")!.body;
     for (const field of ["apiKey", "workflowId", "lotRef", "processorRef", "agentRef", "agencyRef", "authorityRef", "purposeRef", "evidenceRef", "attributionRule"]) expect(page).toContain(`name="${field}"`);
     expect(page).toContain("Load eligible lots"); expect(page).toContain('commandType:"initiateCocoaProcessing"'); expect(page).toContain('fetch("/v2/records"');
+    expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
+  });
+  it("maps one initiated Transformation to one atomic processing-completion command", () => {
+    expect(createCocoaProcessingCompletionEnvelope({ completionId: "GH-COMPLETE-001", transformationRef: "originos:transformation-GH-PROCESS-001-transformation", processorRef: "originos:processor-1", outputQuantityKg: 1180, accepted: true, consequence: "processing-yield-recorded", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-processing-report", attributionRule: "originos:attribution-direct-agent" })).toEqual({
+      commandId: "operator-GH-COMPLETE-001", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRefs: ["originos:evidence-cocoa-processing-report"], attributionRule: "originos:attribution-direct-agent", command: { commandType: "completeCocoaProcessing", payload: { completionId: "GH-COMPLETE-001", transformationRef: "originos:transformation-GH-PROCESS-001-transformation", processorRef: "originos:processor-1", outputQuantityKg: 1180, accepted: true, consequence: "processing-yield-recorded" } }
+    });
+    const page = renderOperatorPage("/workflow")!.body;
+    for (const field of ["completionId", "transformationRef", "processorRef", "outputQuantityKg", "accepted", "consequence"]) expect(page).toContain(`name="${field}"`);
+    expect(page).toContain("Load initiated transformations"); expect(page).toContain('commandType:"completeCocoaProcessing"'); expect(page).toContain("Completion, Outcome, and Consequence");
     expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
   });
 });
