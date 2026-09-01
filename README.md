@@ -114,3 +114,9 @@ ORIGINOS_AUTH_CONFIG=./config/auth.json pnpm start:service
 The shell establishes tested routes for Overview, Cocoa lots, Custody, Workflow, and System status. It is server rendered, keyboard navigable, mobile responsive, and composed through a replaceable web-app port. Unknown paths remain owned by the HTTP adapter and return its normal not-present response.
 
 SW2-01 intentionally does not claim transactional lot entry or browser authentication. Those controls begin in SW2-02 and must pass focused UI-to-API-to-persistence tests before the workflow expands.
+
+### SW2-02 transactional cocoa-lot registration
+
+The Cocoa Lots route now provides the first end-to-end operator transaction. An operator enters the lot reference, positive quantity, origin, custodian, Agent, Agency, Authority, Purpose, evidence, and attribution rule. The page submits one authenticated `registerCocoaLot` command through API v2 and then reloads persisted `material-lot` records.
+
+The API key is held only in the active page's JavaScript memory. It is not inserted into the document, written to local or session storage, placed in a URL, or retained after page navigation or reload. The field is cleared after successful registration. This is a bounded alpha authentication experience, not a production browser session system.

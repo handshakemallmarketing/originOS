@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { cocoaWorkflowCommands } from "@originos/application";
 import { hashApiKey } from "@originos/auth";
 import { checkDataIntegrity, createOperationalBackup, restoreOperationalBackup } from "@originos/operations";
+import { createCocoaLotEnvelope } from "@originos/operator-web";
 import { loadServiceConfig, startOriginService, type OriginService } from "./index.js";
 
 const closeQuietly = async (service: OriginService | undefined): Promise<void> => { if (service) await service.close(); };
@@ -38,6 +39,11 @@ describe("SW1-04 service runtime", () => {
       expect(shell.status).toBe(200); expect(shell.headers.get("content-type")).toBe("text/html; charset=utf-8"); expect(await shell.text()).toContain("Cocoa operations");
       expect(await fetch(`${service.baseUrl}/lots`).then((response) => response.text())).toContain("Cocoa lots");
       expect((await fetch(`${service.baseUrl}/ready`)).status).toBe(200);
+      const browserLot = createCocoaLotEnvelope({ lotId: "ui-browser-lot", quantityKg: 750, originRef: "originos:farm-ghana-1", custodianRef: "originos:warehouse-1", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-receipt", attributionRule: "originos:attribution-direct-agent" });
+      const browserLotResponse = await fetch(`${service.baseUrl}/v2/commands`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": browserLot.commandId }, body: JSON.stringify(browserLot) });
+      expect(browserLotResponse.status).toBe(201);
+      const persistedBrowserLot = await fetch(`${service.baseUrl}/v2/records/originos%3Amaterial-lot-ui-browser-lot`, { headers: authHeaders }).then((response) => response.json()) as { ok: boolean; value: { content: { quantityKg: number; custodianRef: string } } };
+      expect(persistedBrowserLot).toMatchObject({ ok: true, value: { content: { quantityKg: 750, custodianRef: "originos:warehouse-1" } } });
       const commands = cocoaWorkflowCommands({
         runId: "api-cocoa", quantityKg: 1000, originRef: "originos:farm-ghana-1",
         merchantRef: "originos:merchant-1", warehouseRef: "originos:warehouse-1", processorRef: "originos:processor-1"
@@ -50,16 +56,16 @@ describe("SW1-04 service runtime", () => {
       }
       expect((await fetch(`${service.baseUrl}/v2/records`)).status).toBe(401);
       const before = await fetch(`${service.baseUrl}/v2/records`, { headers: authHeaders }).then((response) => response.json()) as { records: Array<{ canonicalType: string }> };
-      expect(before.records).toHaveLength(11);
+      expect(before.records).toHaveLength(12);
       expect(before.records.map((record) => record.canonicalType)).toEqual([
-        "material-lot", "custody-transfer", "comparison-result", "decision", "act", "transformation",
+        "material-lot", "material-lot", "custody-transfer", "comparison-result", "decision", "act", "transformation",
         "completion", "outcome", "consequence", "outcome", "value-status"
       ]);
       await service.close(); service = undefined;
 
       const integrity = await checkDataIntegrity(dataDirectory);
       expect(integrity.ok).toBe(true);
-      expect(integrity.checks.find((check) => check.name === "audit-log")?.detail).toBe("8 chained entries verified");
+      expect(integrity.checks.find((check) => check.name === "audit-log")?.detail).toBe("9 chained entries verified");
       const audit = await readFile(join(dataDirectory, "audit-log.jsonl"), "utf8");
       expect(audit).not.toContain(apiKey); expect(audit).not.toContain("originos:farm-ghana-1"); expect(audit).toContain("cocoa-operator");
       await createOperationalBackup(dataDirectory, backupPath, new Date("2026-09-01T02:00:00Z"));
@@ -71,12 +77,12 @@ describe("SW1-04 service runtime", () => {
 
       service = await startOriginService(config);
       const after = await fetch(`${service.baseUrl}/v2/records`, { headers: authHeaders }).then((response) => response.json()) as { records: unknown[] };
-      expect(after.records).toHaveLength(11);
+      expect(after.records).toHaveLength(12);
       const replay = await fetch(`${service.baseUrl}/v2/commands`, {
         method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": commands[0]!.commandId }, body: JSON.stringify(commands[0])
       });
       expect(replay.headers.get("idempotency-replayed")).toBe("true");
-      expect(await service.application.all()).toHaveLength(11);
+      expect(await service.application.all()).toHaveLength(12);
     } finally { await closeQuietly(service); }
   });
 });
