@@ -102,6 +102,27 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
     const consequenceRecord = foundationRecord("consequence", "known", { fixtureId: `${String(completionId)}-consequence`, workflowId: transformationContent.workflowId, transformationRef, outcomeRef, effect: consequence });
     return { ok: true, value: { created: [completion, outcome, consequenceRecord], superseded: [], facts: [{ recordType: "completion", status: "completed" }, { recordType: "outcome", accepted }, { recordType: "consequence", effect: consequence }] } };
   }
+  if (command.commandType === "materializeProcessedCocoaLot") {
+    const { processedLotId, completionRef } = command.payload;
+    const completion = typeof completionRef === "string" ? records.filter((record) => record.canonicalId === completionRef && record.canonicalType === "completion").at(-1) : undefined;
+    const completionContent = completion?.content as Readonly<Record<string, unknown>> | undefined;
+    if (!completion || completionContent?.completionStatus !== "completed") return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Processed-lot materialization requires a completed cocoa Transformation", [], { completionRef }) };
+    const transformationRef = completionContent.transformationRef;
+    const transformation = typeof transformationRef === "string" ? records.filter((record) => record.canonicalId === transformationRef && record.canonicalType === "transformation").at(-1) : undefined;
+    const transformationContent = transformation?.content as Readonly<Record<string, unknown>> | undefined;
+    const parentLotRef = completionContent.lotRef;
+    const state = materialLotState(records, parentLotRef);
+    if (!transformation || transformationContent?.lotRef !== parentLotRef || !state) return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Completion lineage does not resolve to one input lot and Transformation", [], { completionRef, transformationRef, parentLotRef }) };
+    if (state.currentCustodianRef !== completionContent.processorRef) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Processed-lot custody must continue from the completing processor", [], { completionRef, currentCustodianRef: state.currentCustodianRef, processorRef: completionContent.processorRef }) };
+    const duplicate = records.some((record) => record.canonicalType === "material-lot" && (record.content as Readonly<Record<string, unknown>>).sourceCompletionRef === completionRef);
+    if (duplicate) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "A processed lot already exists for this Completion", [], { completionRef }) };
+    const inputQuantityKg = completionContent.inputQuantityKg;
+    const outputQuantityKg = completionContent.outputQuantityKg;
+    if (typeof inputQuantityKg !== "number" || typeof outputQuantityKg !== "number" || !Number.isFinite(outputQuantityKg) || outputQuantityKg <= 0 || outputQuantityKg > inputQuantityKg) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Completion does not contain a valid conserved output quantity", [], { completionRef, inputQuantityKg, outputQuantityKg }) };
+    const outcome = records.find((record) => record.canonicalType === "outcome" && (record.content as Readonly<Record<string, unknown>>).completionRef === completionRef);
+    const processedLot = foundationRecord("material-lot", "known", { fixtureId: processedLotId, material: "processed-cocoa", quantityKg: outputQuantityKg, custodianRef: completionContent.processorRef, qualityStatus: (outcome?.content as Readonly<Record<string, unknown>> | undefined)?.accepted === true ? "accepted" : "rejected", sourceCompletionRef: completionRef, sourceTransformationRef: transformationRef, lineage: { parentLotRefs: [parentLotRef], conservationBasis: "processing-mass-balance", inputQuantityKg, outputQuantityKg, processLossKg: inputQuantityKg - outputQuantityKg } });
+    return { ok: true, value: { created: [processedLot], superseded: [], facts: [{ recordType: "material-lot", material: "processed-cocoa", quantityKg: outputQuantityKg }] } };
+  }
   if (command.commandType === "compareCandidates") {
     const comparison = foundationRecord("comparison-result", "known", {
       fixtureId: command.payload.fixtureId, family: "COMPARISON", candidates: command.payload.candidates,

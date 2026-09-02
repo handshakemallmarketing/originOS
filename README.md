@@ -138,3 +138,9 @@ The kernel rejects absent lots, processor/custodian mismatch, missing Agent, Age
 The Workflow route now loads initiated Transformations that do not yet have a Completion. The operator records processed output mass, acceptance, and an operational consequence through one authenticated command. The kernel atomically persists a Completion, its Outcome, and the resulting Consequence.
 
 Completion is rejected unless the Transformation was initiated, the initiating processor still holds the lot, output mass is positive and no greater than input mass, and no prior Completion exists. The recorded yield remains operational evidence; it does not yet create a new processed-material lot or assert Value realization.
+
+### SW2-06 processed-material lineage
+
+The Workflow route can now materialize a completed output as a new processed-cocoa lot. Quantity, processor custody, parent lot, Transformation, Completion, and process loss are derived from canonical records rather than re-entered by the operator.
+
+The kernel rejects missing or inconsistent completion lineage, custody discontinuity, invalid completed mass, and a second processed lot for the same Completion. The resulting lot can participate in the existing custody-transfer flow because it uses the same canonical material-lot boundary. Split, merge, and Value realization remain outside this slice.
