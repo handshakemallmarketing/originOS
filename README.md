@@ -144,3 +144,9 @@ Completion is rejected unless the Transformation was initiated, the initiating p
 The Workflow route can now materialize a completed output as a new processed-cocoa lot. Quantity, processor custody, parent lot, Transformation, Completion, and process loss are derived from canonical records rather than re-entered by the operator.
 
 The kernel rejects missing or inconsistent completion lineage, custody discontinuity, invalid completed mass, and a second processed lot for the same Completion. The resulting lot can participate in the existing custody-transfer flow because it uses the same canonical material-lot boundary. Split, merge, and Value realization remain outside this slice.
+
+### SW2-07 delivery and evidence-backed Value
+
+The existing Custody route delivers a complete processed-cocoa lot from processor to buyer. The Workflow route then records one delivery Outcome and Value status. Value is realized only when the processed lot is accepted, the buyer is its current custodian, Purpose is fulfilled, evidence is present, and consideration is settled.
+
+Pending consideration or unfulfilled Purpose produces an incomplete Value status rather than a false realization claim. The kernel rejects delivery gaps, rejected material, invalid consideration states, missing Purpose/evidence, and duplicate Value status for a processed lot.

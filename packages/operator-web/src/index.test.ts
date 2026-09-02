@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createCocoaLotEnvelope, createCocoaProcessingCompletionEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope, createProcessedCocoaLotEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
+import { createCocoaLotEnvelope, createCocoaProcessingCompletionEnvelope, createCocoaProcessingEnvelope, createCocoaValueEnvelope, createCustodyTransferEnvelope, createProcessedCocoaLotEnvelope, operatorRoutes, renderOperatorPage } from "./index.js";
 describe("SW2-01 Merchant/Cocoa operator shell", () => {
   it("renders every declared route with one active navigation item", () => {
     expect(operatorRoutes.map(({ path }) => path)).toEqual(["/", "/lots", "/transfers", "/workflow", "/system"]);
@@ -54,6 +54,15 @@ describe("SW2-01 Merchant/Cocoa operator shell", () => {
     const page = renderOperatorPage("/workflow")!.body;
     for (const field of ["processedLotId", "completionRef"]) expect(page).toContain(`name="${field}"`);
     expect(page).toContain("Load completed outputs"); expect(page).toContain('commandType:"materializeProcessedCocoaLot"'); expect(page).toContain("conserved lineage and custody");
+    expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
+  });
+  it("maps one delivered processed lot to an evidence-backed Value command", () => {
+    expect(createCocoaValueEnvelope({ realizationId: "GH-VALUE-001", processedLotRef: "originos:material-lot-GH-PROCESSED-001", buyerRef: "originos:buyer-1", purposeFulfilled: true, considerationStatus: "settled", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-delivery-payment", attributionRule: "originos:attribution-direct-agent" })).toEqual({
+      commandId: "operator-GH-VALUE-001", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRefs: ["originos:evidence-cocoa-delivery-payment"], attributionRule: "originos:attribution-direct-agent", command: { commandType: "recordCocoaDeliveryValue", payload: { realizationId: "GH-VALUE-001", processedLotRef: "originos:material-lot-GH-PROCESSED-001", buyerRef: "originos:buyer-1", purposeFulfilled: true, considerationStatus: "settled" } }
+    });
+    const page = renderOperatorPage("/workflow")!.body;
+    for (const field of ["realizationId", "processedLotRef", "buyerRef", "purposeFulfilled", "considerationStatus"]) expect(page).toContain(`name="${field}"`);
+    expect(page).toContain("Load delivered processed lots"); expect(page).toContain('commandType:"recordCocoaDeliveryValue"'); expect(page).toContain("evidence-backed Value status");
     expect(page).not.toContain("localStorage"); expect(page).not.toContain("sessionStorage");
   });
 });

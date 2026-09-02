@@ -123,6 +123,23 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
     const processedLot = foundationRecord("material-lot", "known", { fixtureId: processedLotId, material: "processed-cocoa", quantityKg: outputQuantityKg, custodianRef: completionContent.processorRef, qualityStatus: (outcome?.content as Readonly<Record<string, unknown>> | undefined)?.accepted === true ? "accepted" : "rejected", sourceCompletionRef: completionRef, sourceTransformationRef: transformationRef, lineage: { parentLotRefs: [parentLotRef], conservationBasis: "processing-mass-balance", inputQuantityKg, outputQuantityKg, processLossKg: inputQuantityKg - outputQuantityKg } });
     return { ok: true, value: { created: [processedLot], superseded: [], facts: [{ recordType: "material-lot", material: "processed-cocoa", quantityKg: outputQuantityKg }] } };
   }
+  if (command.commandType === "recordCocoaDeliveryValue") {
+    const { realizationId, processedLotRef, buyerRef, purposeFulfilled, considerationStatus, purposeRef, evidenceRefs } = command.payload;
+    const state = materialLotState(records, processedLotRef);
+    const lotContent = state?.lot.content as Readonly<Record<string, unknown>> | undefined;
+    if (!state || lotContent?.material !== "processed-cocoa") return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Value recording requires an existing processed-cocoa lot", [], { processedLotRef }) };
+    if (lotContent.qualityStatus !== "accepted") return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Rejected processed cocoa cannot support realized Value", [], { processedLotRef, qualityStatus: lotContent.qualityStatus }) };
+    const delivery = records.filter((record) => record.canonicalType === "custody-transfer" && (record.content as Readonly<Record<string, unknown>>).lotRef === processedLotRef && (record.content as Readonly<Record<string, unknown>>).toCustodianRef === buyerRef).at(-1);
+    if (!delivery || state.currentCustodianRef !== buyerRef || buyerRef === lotContent.custodianRef) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Value recording requires completed delivery to the current buyer custodian", [], { processedLotRef, buyerRef, currentCustodianRef: state.currentCustodianRef }) };
+    if (typeof purposeFulfilled !== "boolean" || (considerationStatus !== "settled" && considerationStatus !== "pending")) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Value recording requires Purpose status and settled or pending consideration", [], { processedLotRef, considerationStatus }) };
+    if (typeof purposeRef !== "string" || purposeRef.trim() === "" || !Array.isArray(evidenceRefs) || evidenceRefs.length === 0) return { ok: false, error: canonicalError("C2C_E004_PROVENANCE_MISSING", "Value recording requires explicit Purpose and evidence", ["C2C-INV-003"]) };
+    const duplicate = records.some((record) => record.canonicalType === "value-status" && (record.content as Readonly<Record<string, unknown>>).processedLotRef === processedLotRef);
+    if (duplicate) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Value status already exists for this processed lot", [], { processedLotRef }) };
+    const realized = purposeFulfilled && considerationStatus === "settled";
+    const deliveryOutcome = foundationRecord("outcome", "known", { fixtureId: `${String(realizationId)}-delivery-outcome`, processedLotRef, buyerRef, deliveryTransferRef: delivery.canonicalId, delivered: true, accepted: true });
+    const valueStatus = foundationRecord("value-status", realized ? "known" : "incomplete", { fixtureId: `${String(realizationId)}-value`, processedLotRef, buyerRef, deliveryOutcomeRef: deliveryOutcome.canonicalId, purposeRef, purposeFulfillmentAsserted: purposeFulfilled, considerationStatus, realizationStatus: realized ? "realized" : "incomplete", evidenceRefs });
+    return { ok: true, value: { created: [deliveryOutcome, valueStatus], superseded: [], facts: [{ recordType: "outcome", delivered: true }, { recordType: "value-status", status: valueStatus.assertionStatus }] } };
+  }
   if (command.commandType === "compareCandidates") {
     const comparison = foundationRecord("comparison-result", "known", {
       fixtureId: command.payload.fixtureId, family: "COMPARISON", candidates: command.payload.candidates,

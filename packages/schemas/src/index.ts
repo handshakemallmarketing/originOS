@@ -18,6 +18,7 @@ const commandShapes = {
   initiateCocoaProcessing: { required: { workflowId: "string", lotRef: "string", processorRef: "string" } },
   completeCocoaProcessing: { required: { completionId: "string", transformationRef: "string", processorRef: "string", outputQuantityKg: "number", accepted: "boolean", consequence: "string" } },
   materializeProcessedCocoaLot: { required: { processedLotId: "string", completionRef: "string" } },
+  recordCocoaDeliveryValue: { required: { realizationId: "string", processedLotRef: "string", buyerRef: "string", purposeFulfilled: "boolean", considerationStatus: "string" } },
   compareCandidates: { required: { fixtureId: "string", candidates: "array", dominant: "string" } },
   recordDecision: { required: { fixtureId: "string" }, optional: { merchant: "string", actor: "string", supplier: "string", systemAccess: "boolean", amount: "number", approvalLimit: "number" } },
   evaluateShipment: { required: { fixtureId: "string", shipmentPossible: "boolean", clearance: "boolean" } },

@@ -22,6 +22,6 @@ describe("OriginOS API v2 schemas", () => {
     expect(openApiDocument.components.schemas.ApplicationCommandEnvelope.additionalProperties).toBe(false);
     expect(openApiDocument.components.schemas.ApplicationCommandEnvelope.properties.command.oneOf.map((schema) => schema.properties.commandType.const)).toEqual(supportedCommandTypes);
     expect(openApiDocument.paths["/v2/commands"].post.security).toEqual([{ BearerAuth: [] }]);
-    expect(createHash("sha256").update(JSON.stringify(openApiDocument)).digest("hex")).toBe("7dc45977e303b77da37986820153077afb275f6c7af7647788942498483a2e4c");
+    expect(createHash("sha256").update(JSON.stringify(openApiDocument)).digest("hex")).toBe("69cfbe6ae0b70be64413c019826bfb3060ac9b2730c65fdba75afcad222b8ceb");
   });
 });

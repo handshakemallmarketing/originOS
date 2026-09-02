@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { cocoaWorkflowCommands } from "@originos/application";
 import { hashApiKey } from "@originos/auth";
 import { checkDataIntegrity, createOperationalBackup, restoreOperationalBackup } from "@originos/operations";
-import { createCocoaLotEnvelope, createCocoaProcessingCompletionEnvelope, createCocoaProcessingEnvelope, createCustodyTransferEnvelope, createProcessedCocoaLotEnvelope } from "@originos/operator-web";
+import { createCocoaLotEnvelope, createCocoaProcessingCompletionEnvelope, createCocoaProcessingEnvelope, createCocoaValueEnvelope, createCustodyTransferEnvelope, createProcessedCocoaLotEnvelope } from "@originos/operator-web";
 import { loadServiceConfig, startOriginService, type OriginService } from "./index.js";
 
 const closeQuietly = async (service: OriginService | undefined): Promise<void> => { if (service) await service.close(); };
@@ -64,6 +64,12 @@ describe("SW1-04 service runtime", () => {
       expect(processedLotResponse.status).toBe(201);
       const persistedProcessedLot = await fetch(`${service.baseUrl}/v2/records/originos%3Amaterial-lot-ui-browser-processed-lot`, { headers: authHeaders }).then((response) => response.json()) as { ok: boolean; value: { content: { material: string; quantityKg: number; custodianRef: string; lineage: { parentLotRefs: string[]; processLossKg: number } } } };
       expect(persistedProcessedLot).toMatchObject({ ok: true, value: { content: { material: "processed-cocoa", quantityKg: 700, custodianRef: "originos:processor-1", lineage: { parentLotRefs: ["originos:material-lot-ui-browser-lot"], processLossKg: 50 } } } });
+      const delivery = createCustodyTransferEnvelope({ transferId: "ui-browser-delivery", lotRef: "originos:material-lot-ui-browser-processed-lot", fromCustodianRef: "originos:processor-1", toCustodianRef: "originos:buyer-1", quantityKg: 700, agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-delivery", attributionRule: "originos:attribution-direct-agent" });
+      expect((await fetch(`${service.baseUrl}/v2/commands`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": delivery.commandId }, body: JSON.stringify(delivery) })).status).toBe(201);
+      const value = createCocoaValueEnvelope({ realizationId: "ui-browser-value", processedLotRef: "originos:material-lot-ui-browser-processed-lot", buyerRef: "originos:buyer-1", purposeFulfilled: true, considerationStatus: "settled", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-delivery-payment", attributionRule: "originos:attribution-direct-agent" });
+      expect((await fetch(`${service.baseUrl}/v2/commands`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": value.commandId }, body: JSON.stringify(value) })).status).toBe(201);
+      const persistedValue = await fetch(`${service.baseUrl}/v2/records/originos%3Avalue-status-ui-browser-value-value`, { headers: authHeaders }).then((response) => response.json()) as { ok: boolean; value: { content: { processedLotRef: string; buyerRef: string; realizationStatus: string; considerationStatus: string } } };
+      expect(persistedValue).toMatchObject({ ok: true, value: { content: { processedLotRef: "originos:material-lot-ui-browser-processed-lot", buyerRef: "originos:buyer-1", realizationStatus: "realized", considerationStatus: "settled" } } });
       const commands = cocoaWorkflowCommands({
         runId: "api-cocoa", quantityKg: 1000, originRef: "originos:farm-ghana-1",
         merchantRef: "originos:merchant-1", warehouseRef: "originos:warehouse-1", processorRef: "originos:processor-1"
@@ -76,16 +82,16 @@ describe("SW1-04 service runtime", () => {
       }
       expect((await fetch(`${service.baseUrl}/v2/records`)).status).toBe(401);
       const before = await fetch(`${service.baseUrl}/v2/records`, { headers: authHeaders }).then((response) => response.json()) as { records: Array<{ canonicalType: string }> };
-      expect(before.records).toHaveLength(20);
+      expect(before.records).toHaveLength(23);
       expect(before.records.map((record) => record.canonicalType)).toEqual([
-        "material-lot", "custody-transfer", "decision", "act", "transformation", "completion", "outcome", "consequence", "material-lot", "material-lot", "custody-transfer", "comparison-result", "decision", "act", "transformation",
+        "material-lot", "custody-transfer", "decision", "act", "transformation", "completion", "outcome", "consequence", "material-lot", "custody-transfer", "outcome", "value-status", "material-lot", "custody-transfer", "comparison-result", "decision", "act", "transformation",
         "completion", "outcome", "consequence", "outcome", "value-status"
       ]);
       await service.close(); service = undefined;
 
       const integrity = await checkDataIntegrity(dataDirectory);
       expect(integrity.ok).toBe(true);
-      expect(integrity.checks.find((check) => check.name === "audit-log")?.detail).toBe("13 chained entries verified");
+      expect(integrity.checks.find((check) => check.name === "audit-log")?.detail).toBe("15 chained entries verified");
       const audit = await readFile(join(dataDirectory, "audit-log.jsonl"), "utf8");
       expect(audit).not.toContain(apiKey); expect(audit).not.toContain("originos:farm-ghana-1"); expect(audit).toContain("cocoa-operator");
       await createOperationalBackup(dataDirectory, backupPath, new Date("2026-09-01T02:00:00Z"));
@@ -97,12 +103,12 @@ describe("SW1-04 service runtime", () => {
 
       service = await startOriginService(config);
       const after = await fetch(`${service.baseUrl}/v2/records`, { headers: authHeaders }).then((response) => response.json()) as { records: unknown[] };
-      expect(after.records).toHaveLength(20);
+      expect(after.records).toHaveLength(23);
       const replay = await fetch(`${service.baseUrl}/v2/commands`, {
         method: "POST", headers: { ...authHeaders, "content-type": "application/json", "idempotency-key": commands[0]!.commandId }, body: JSON.stringify(commands[0])
       });
       expect(replay.headers.get("idempotency-replayed")).toBe("true");
-      expect(await service.application.all()).toHaveLength(20);
+      expect(await service.application.all()).toHaveLength(23);
     } finally { await closeQuietly(service); }
   });
 });
