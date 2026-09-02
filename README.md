@@ -150,3 +150,9 @@ The kernel rejects missing or inconsistent completion lineage, custody discontin
 The existing Custody route delivers a complete processed-cocoa lot from processor to buyer. The Workflow route then records one delivery Outcome and Value status. Value is realized only when the processed lot is accepted, the buyer is its current custodian, Purpose is fulfilled, evidence is present, and consideration is settled.
 
 Pending consideration or unfulfilled Purpose produces an incomplete Value status rather than a false realization claim. The kernel rejects delivery gaps, rejected material, invalid consideration states, missing Purpose/evidence, and duplicate Value status for a processed lot.
+
+### SW2-RC1 bounded-alpha audit and hardening
+
+The complete SW2 cocoa path is now release-candidate audited as one workflow rather than as isolated sprint slices. An application-level acceptance test proves the seven-command, 12-record chain from raw-lot registration through realized Value, including atomic multi-record transitions and idempotent replay.
+
+The audit also closes a material-conservation gap: once a processed output lot has been materialized, its raw parent lot is consumed and can no longer be custody-transferred. RC1 is a GO for bounded alpha evaluation and a NO-GO for production deployment until the security, concurrency, live PostgreSQL recovery, and broader commercial boundaries in `SW2_RC1_AUDIT_REPORT.md` are resolved.

@@ -48,6 +48,13 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
     const lotRef = command.payload.lotRef;
     const state = materialLotState(records, lotRef);
     if (!state) return { ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Custody transfer requires an existing material lot", [], { lotRef }) };
+    const consumed = records.some((record) => {
+      if (record.canonicalType !== "material-lot") return false;
+      const content = record.content as Readonly<Record<string, unknown>>;
+      const lineage = content.lineage as Readonly<Record<string, unknown>> | undefined;
+      return content.material === "processed-cocoa" && Array.isArray(lineage?.parentLotRefs) && lineage.parentLotRefs.includes(lotRef);
+    });
+    if (consumed) return { ok: false, error: canonicalError("C2C_E010_TRANSITION_INVALID", "Consumed input lot cannot be transferred after processed output materialization", [], { lotRef }) };
     const lotContent = state.lot.content as Readonly<Record<string, unknown>>;
     const currentCustodianRef = state.currentCustodianRef;
     if (command.payload.fromCustodianRef !== currentCustodianRef) {
