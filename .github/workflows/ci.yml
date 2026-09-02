@@ -15,14 +15,10 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm check:boundaries
-      - run: pnpm check:traceability
-      - run: pnpm typecheck
-      - name: Red-state conformance evidence
-        run: pnpm test:conformance
-        continue-on-error: true
-      - name: Assert SW0-05 expected partial-red state
-        run: test "$(cat docs/traceability/implementation-status.txt)" = "RED_EXPECTED_4"
+      - name: Verify release gates
+        run: pnpm check
+      - name: Build all packages
+        run: pnpm build
   live-postgresql:
     runs-on: ubuntu-latest
     services:

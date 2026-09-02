@@ -25,3 +25,5 @@ The certification test drops and truncates OriginOS tables. It must run only aga
 ## Release rule
 
 RC4 passes the live-database blocker only when the `live-postgresql` CI job succeeds for the published commit. A compiled or skipped test is not certification evidence.
+
+The first live execution passed its PostgreSQL certification step and exposed an unrelated stale CI assertion that still required the obsolete Sprint 0 `RED_EXPECTED_4` state. RC4 removes that legacy partial-red gate; normal CI now runs the complete release checks and build alongside the independent live PostgreSQL job.
