@@ -23,3 +23,33 @@ jobs:
         continue-on-error: true
       - name: Assert SW0-05 expected partial-red state
         run: test "$(cat docs/traceability/implementation-status.txt)" = "RED_EXPECTED_4"
+  live-postgresql:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: originos
+          POSTGRES_PASSWORD: originos-test
+          POSTGRES_DB: originos_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U originos -d originos_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      ORIGINOS_TEST_DATABASE_URL: postgresql://originos:originos-test@127.0.0.1:5432/originos_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.19.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Certify live PostgreSQL transactions
+        run: pnpm --filter @originos/repository-postgres test:live

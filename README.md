@@ -168,3 +168,9 @@ A concurrency acceptance test submits two processed-lot materialization commands
 PostgreSQL command execution now commits canonical records, the idempotency receipt, and a structured command audit event in the same serializable transaction under the existing advisory lock. If any step fails before commit, the transaction is rolled back rather than leaving canonical state without corresponding audit evidence.
 
 Readiness reports the number of reachable transactional audit events, and tests verify the HTTP event passed into the transaction, committed event retrieval, idempotent replay without duplicate audit, and rollback SQL ordering under injected failure. The hash-chained operational log remains a separate observability channel. JSON-file mode remains bounded-alpha because atomicity cannot span its three independent files.
+
+### SW2-RC4 live PostgreSQL certification gate
+
+CI now provisions PostgreSQL 17 and runs a dedicated live-database certification test. The gate recreates and migrates the schema, injects a pre-commit failure and verifies real rollback, commits and replays a command, closes and reconnects the repository, and submits competing transactions that must resolve to one accepted and one rejected result with complete audit evidence.
+
+Run the same gate against an isolated PostgreSQL database with `ORIGINOS_TEST_DATABASE_URL=... pnpm --filter @originos/repository-postgres test:live`. The test drops and truncates OriginOS tables and must never target a shared or production database.
