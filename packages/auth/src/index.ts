@@ -1,8 +1,16 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
 export interface AuthenticatedPrincipal { readonly principalId: string; readonly permittedAgentRefs: readonly string[] }
 export type AuthenticationResult = { readonly ok: true; readonly principal: AuthenticatedPrincipal } | { readonly ok: false };
 export interface RequestAuthenticator { authenticate(authorization: string | undefined): Promise<AuthenticationResult> }
+export interface OidcJwtAuthenticatorOptions {
+  readonly issuer: string;
+  readonly audience: string;
+  readonly jwksUri: string;
+  readonly agentRefsClaim?: string;
+  readonly requiredScope?: string;
+}
 interface PrincipalConfig { readonly principalId: string; readonly apiKeySha256: string; readonly permittedAgentRefs: readonly string[] }
 interface AuthConfig { readonly version: 1; readonly principals: readonly PrincipalConfig[] }
 export const hashApiKey = (apiKey: string): string => createHash("sha256").update(apiKey, "utf8").digest("hex");
@@ -29,5 +37,50 @@ export class StaticApiKeyAuthenticator implements RequestAuthenticator {
     const suppliedHash = Buffer.from(hashApiKey(match[1]), "hex");
     for (const candidate of this.#principals) if (timingSafeEqual(suppliedHash, Buffer.from(candidate.apiKeySha256, "hex"))) return { ok: true, principal: Object.freeze({ principalId: candidate.principalId, permittedAgentRefs: candidate.permittedAgentRefs }) };
     return { ok: false };
+  }
+}
+
+const requiredText = (value: string, name: string): string => {
+  const normalized = value.trim();
+  if (!normalized) throw new Error(`${name} is required`);
+  return normalized;
+};
+
+export class OidcJwtAuthenticator implements RequestAuthenticator {
+  readonly #issuer: string;
+  readonly #audience: string;
+  readonly #agentRefsClaim: string;
+  readonly #requiredScope: string;
+  readonly #keySet: JWTVerifyGetKey;
+
+  constructor(options: OidcJwtAuthenticatorOptions, keySet?: JWTVerifyGetKey) {
+    this.#issuer = requiredText(options.issuer, "OIDC issuer");
+    let issuerUrl: URL;
+    try { issuerUrl = new URL(this.#issuer); } catch { throw new Error("OIDC issuer must be a valid URL"); }
+    if (issuerUrl.protocol !== "https:") throw new Error("OIDC issuer must use HTTPS");
+    this.#audience = requiredText(options.audience, "OIDC audience");
+    this.#agentRefsClaim = requiredText(options.agentRefsClaim ?? "originos_agent_refs", "OIDC Agent refs claim");
+    this.#requiredScope = requiredText(options.requiredScope ?? "originos:commands", "OIDC required scope");
+    let jwks: URL;
+    try { jwks = new URL(requiredText(options.jwksUri, "OIDC JWKS URI")); } catch { throw new Error("OIDC JWKS URI must be a valid URL"); }
+    if (jwks.protocol !== "https:") throw new Error("OIDC JWKS URI must use HTTPS");
+    this.#keySet = keySet ?? createRemoteJWKSet(jwks, { timeoutDuration: 5_000 });
+  }
+
+  async authenticate(authorization: string | undefined): Promise<AuthenticationResult> {
+    const match = /^Bearer\s+([^\s]+)$/i.exec(authorization ?? "");
+    if (!match?.[1]) return { ok: false };
+    try {
+      const { payload } = await jwtVerify(match[1], this.#keySet, {
+        algorithms: ["RS256"], issuer: this.#issuer, audience: this.#audience,
+        clockTolerance: 30, maxTokenAge: "15m", requiredClaims: ["sub", "iat", "exp"]
+      });
+      if (typeof payload.sub !== "string" || payload.sub.trim() === "") return { ok: false };
+      const scopes = typeof payload.scope === "string" ? payload.scope.split(/\s+/).filter(Boolean) : [];
+      if (!scopes.includes(this.#requiredScope)) return { ok: false };
+      const refs = payload[this.#agentRefsClaim];
+      if (!Array.isArray(refs) || refs.length === 0 || refs.some((ref) => typeof ref !== "string" || ref.trim() === "")) return { ok: false };
+      return { ok: true, principal: Object.freeze({ principalId: payload.sub, permittedAgentRefs: Object.freeze([...new Set(refs as string[])]) }) };
+    } catch { return { ok: false }; }
   }
 }

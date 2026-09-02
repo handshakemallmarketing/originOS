@@ -1,6 +1,6 @@
 {
   "name": "@originos/transport-http",
-  "version": "0.17.0-rc.3",
+  "version": "0.17.0-rc.5",
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {

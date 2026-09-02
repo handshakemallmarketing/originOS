@@ -28,9 +28,9 @@ Formal decision: GO for the bounded Sprint 0 kernel profile; NO-GO for productio
 - Optional PostgreSQL canonical repository with serializable batch transactions, immutable JSONB history, and database-level writer coordination.
 - PostgreSQL command receipts committed in the same serializable transaction as canonical writes and the stored HTTP response.
 
-### SW1-07 authenticated HTTP surface
+### SW2-RC5 authenticated HTTP surface
 
-- `POST /v2/commands` requires a Bearer API key and `Idempotency-Key` equal to the application `commandId`.
+- `POST /v2/commands` requires a Bearer token and `Idempotency-Key` equal to the application `commandId`.
 - `GET /v2/records` returns the canonical record set to an authenticated caller.
 - `GET /v2/records/:id` returns the current immutable version to an authenticated caller.
 - `GET /v2/records/:id/history` returns complete version history to an authenticated caller.
@@ -47,12 +47,17 @@ HTTP, JSON receipt storage, and status mapping are replaceable adapters. They do
 ### SW1-04 executable service
 
 ```bash
-ORIGINOS_HOST=127.0.0.1 ORIGINOS_PORT=3000 ORIGINOS_DATA_DIR=./data/originos ORIGINOS_AUTH_CONFIG=./config/auth.json pnpm start:service
+ORIGINOS_HOST=127.0.0.1 ORIGINOS_PORT=3000 ORIGINOS_DATA_DIR=./data/originos \
+ORIGINOS_AUTH_MODE=oidc ORIGINOS_OIDC_ISSUER=https://identity.example.com \
+ORIGINOS_OIDC_AUDIENCE=originos-api ORIGINOS_OIDC_JWKS_URI=https://identity.example.com/.well-known/jwks.json \
+pnpm start:service
 ```
 
 The runtime validates its port, resolves its data directory, composes the application and adapters, and closes its HTTP listener on `SIGINT` or `SIGTERM`. Defaults bind only to `127.0.0.1`; external exposure must be an explicit operational decision.
 
-The required auth file stores hashes, never plaintext API keys:
+OIDC access tokens must be RS256 signed, no older than 15 minutes, and contain `sub`, `iat`, `exp`, the `originos:commands` scope, and a nonempty `originos_agent_refs` string array. Issuer, audience, signature, time bounds, scope, and Agent bindings are verified on every request. The claim and scope names can be changed with `ORIGINOS_OIDC_AGENT_REFS_CLAIM` and `ORIGINOS_OIDC_REQUIRED_SCOPE`.
+
+For local development only, select `ORIGINOS_AUTH_MODE=static` and provide a hash-only auth file. Static mode is rejected when `NODE_ENV=production`:
 
 ```json
 {"version":1,"principals":[{"principalId":"ops-merchant","apiKeySha256":"<64-character SHA-256 hex>","permittedAgentRefs":["originos:merchant-1"]}]}
@@ -76,7 +81,10 @@ Set `ORIGINOS_DATABASE_URL` to select PostgreSQL canonical persistence. Without 
 
 ```bash
 ORIGINOS_DATABASE_URL='postgresql://originos:secret@localhost/originos' \
-ORIGINOS_AUTH_CONFIG=./config/auth.json \
+ORIGINOS_AUTH_MODE=oidc \
+ORIGINOS_OIDC_ISSUER=https://identity.example.com \
+ORIGINOS_OIDC_AUDIENCE=originos-api \
+ORIGINOS_OIDC_JWKS_URI=https://identity.example.com/.well-known/jwks.json \
 ORIGINOS_DATA_DIR=./data/originos \
 pnpm start:service
 ```
@@ -85,7 +93,7 @@ Startup creates the bounded canonical and command-receipt tables and canonical i
 
 PostgreSQL deployments must use database-native encrypted backup, restore, credential, TLS, monitoring, and migration controls; `pnpm ops backup` covers only the local JSON-mode operational files and must not be represented as a PostgreSQL backup. JSON mode remains an explicitly single-process reference adapter and retains its write-ahead recovery behavior.
 
-This remains an application alpha. Static API keys do not supply TLS, OAuth/OIDC, automatic key rotation, user administration, or production-grade authorization. The audit log is deliberately outside the canonical command transaction, and a live PostgreSQL failure-injection/recovery gate is still required before any production or horizontal-processing claim.
+This remains an application release candidate. OIDC supplies federated identity and issuer-managed signing-key rotation, but deployment still requires TLS termination, identity-provider administration, authorization governance, and operational monitoring. The audit log remains deliberately outside the canonical command transaction.
 
 ## Commands
 
@@ -108,7 +116,7 @@ Architecture is downstream of canon. Framework, database, authentication, and de
 Start the service and open its base URL to use the responsive operator shell:
 
 ```bash
-ORIGINOS_AUTH_CONFIG=./config/auth.json pnpm start:service
+ORIGINOS_AUTH_MODE=static ORIGINOS_AUTH_CONFIG=./config/auth.json pnpm start:service
 ```
 
 The shell establishes tested routes for Overview, Cocoa lots, Custody, Workflow, and System status. It is server rendered, keyboard navigable, mobile responsive, and composed through a replaceable web-app port. Unknown paths remain owned by the HTTP adapter and return its normal not-present response.

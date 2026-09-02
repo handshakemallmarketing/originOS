@@ -12,13 +12,15 @@ const closeQuietly = async (service: OriginService | undefined): Promise<void> =
 
 describe("SW1-04 service runtime", () => {
   it("loads bounded configuration and rejects invalid ports", () => {
-    expect(loadServiceConfig({ ORIGINOS_HOST: "127.0.0.1", ORIGINOS_PORT: "8080", ORIGINOS_DATA_DIR: "runtime-data", ORIGINOS_AUTH_CONFIG: "auth.json" })).toEqual({
-      host: "127.0.0.1", port: 8080, dataDirectory: resolve("runtime-data"), authConfigPath: resolve("auth.json")
+    expect(loadServiceConfig({ ORIGINOS_HOST: "127.0.0.1", ORIGINOS_PORT: "8080", ORIGINOS_DATA_DIR: "runtime-data", ORIGINOS_AUTH_MODE: "static", ORIGINOS_AUTH_CONFIG: "auth.json" })).toEqual({
+      host: "127.0.0.1", port: 8080, dataDirectory: resolve("runtime-data"), authentication: { mode: "static", configPath: resolve("auth.json") }
     });
-    expect(loadServiceConfig({ ORIGINOS_AUTH_CONFIG: "auth.json", ORIGINOS_DATABASE_URL: "postgres://originos@db/originos" }).databaseUrl).toBe("postgres://originos@db/originos");
+    expect(loadServiceConfig({ ORIGINOS_AUTH_MODE: "static", ORIGINOS_AUTH_CONFIG: "auth.json", ORIGINOS_DATABASE_URL: "postgres://originos@db/originos" }).databaseUrl).toBe("postgres://originos@db/originos");
+    expect(loadServiceConfig({ ORIGINOS_AUTH_MODE: "oidc", ORIGINOS_OIDC_ISSUER: "https://id.example", ORIGINOS_OIDC_AUDIENCE: "originos", ORIGINOS_OIDC_JWKS_URI: "https://id.example/jwks" }).authentication).toEqual({ mode: "oidc", issuer: "https://id.example", audience: "originos", jwksUri: "https://id.example/jwks", agentRefsClaim: "originos_agent_refs", requiredScope: "originos:commands" });
     expect(() => loadServiceConfig({ ORIGINOS_PORT: "not-a-port" })).toThrow(/ORIGINOS_PORT/);
     expect(() => loadServiceConfig({ ORIGINOS_PORT: "65536" })).toThrow(/ORIGINOS_PORT/);
-    expect(() => loadServiceConfig({})).toThrow(/ORIGINOS_AUTH_CONFIG/);
+    expect(() => loadServiceConfig({})).toThrow(/ORIGINOS_AUTH_MODE/);
+    expect(() => loadServiceConfig({ ORIGINOS_AUTH_MODE: "static", ORIGINOS_AUTH_CONFIG: "auth.json", NODE_ENV: "production" })).toThrow(/unavailable/);
   });
 
   it("runs the complete Cocoa workflow through HTTP and preserves it across graceful restart", async () => {
@@ -27,7 +29,7 @@ describe("SW1-04 service runtime", () => {
     const authConfigPath = `${dataDirectory}.auth.json`;
     const apiKey = "service-test-secret";
     await writeFile(authConfigPath, JSON.stringify({ version: 1, principals: [{ principalId: "cocoa-operator", apiKeySha256: hashApiKey(apiKey), permittedAgentRefs: ["originos:merchant-1", "originos:warehouse-1", "originos:processor-1"] }] }), "utf8");
-    const config = { host: "127.0.0.1", port: 0, dataDirectory, authConfigPath } as const;
+    const config = { host: "127.0.0.1", port: 0, dataDirectory, authentication: { mode: "static", configPath: authConfigPath } } as const;
     const authHeaders = { authorization: `Bearer ${apiKey}` } as const;
     let service: OriginService | undefined;
     try {

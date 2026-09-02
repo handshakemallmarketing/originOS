@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import type { AddressInfo } from "node:net";
 import { isAbsolute, join, resolve } from "node:path";
 import { OriginApplication } from "@originos/application";
-import { StaticApiKeyAuthenticator } from "@originos/auth";
+import { OidcJwtAuthenticator, StaticApiKeyAuthenticator, type RequestAuthenticator } from "@originos/auth";
 import { acquireOperationalLock, checkDataIntegrity, JsonlAuditLog } from "@originos/operations";
 import { operatorWebApp } from "@originos/operator-web";
 import { JsonFileCanonicalRepository } from "@originos/repository";
@@ -10,7 +10,10 @@ import type { CanonicalRepository } from "@originos/repository";
 import { PostgresCanonicalRepository } from "@originos/repository-postgres";
 import { createOriginHttpServer, JsonCommandReceiptStore, type CommandReceiptStore } from "@originos/transport-http";
 
-export interface ServiceConfig { readonly host: string; readonly port: number; readonly dataDirectory: string; readonly authConfigPath: string; readonly databaseUrl?: string }
+export type ServiceAuthenticationConfig =
+  | { readonly mode: "oidc"; readonly issuer: string; readonly audience: string; readonly jwksUri: string; readonly agentRefsClaim: string; readonly requiredScope: string }
+  | { readonly mode: "static"; readonly configPath: string };
+export interface ServiceConfig { readonly host: string; readonly port: number; readonly dataDirectory: string; readonly authentication: ServiceAuthenticationConfig; readonly databaseUrl?: string }
 export interface OriginService {
   readonly application: OriginApplication;
   readonly config: ServiceConfig;
@@ -26,11 +29,22 @@ export const loadServiceConfig = (environment: NodeJS.ProcessEnv): ServiceConfig
   if (!Number.isInteger(port) || port < 0 || port > 65_535) throw new Error("ORIGINOS_PORT must be an integer from 0 through 65535");
   const suppliedDirectory = environment.ORIGINOS_DATA_DIR?.trim() || "./data/originos";
   const dataDirectory = isAbsolute(suppliedDirectory) ? suppliedDirectory : resolve(suppliedDirectory);
-  const suppliedAuthConfig = environment.ORIGINOS_AUTH_CONFIG?.trim();
-  if (!suppliedAuthConfig) throw new Error("ORIGINOS_AUTH_CONFIG is required");
-  const authConfigPath = isAbsolute(suppliedAuthConfig) ? suppliedAuthConfig : resolve(suppliedAuthConfig);
+  const mode = environment.ORIGINOS_AUTH_MODE?.trim().toLowerCase();
+  let authentication: ServiceAuthenticationConfig;
+  if (mode === "oidc") {
+    const issuer = environment.ORIGINOS_OIDC_ISSUER?.trim();
+    const audience = environment.ORIGINOS_OIDC_AUDIENCE?.trim();
+    const jwksUri = environment.ORIGINOS_OIDC_JWKS_URI?.trim();
+    if (!issuer || !audience || !jwksUri) throw new Error("ORIGINOS_OIDC_ISSUER, ORIGINOS_OIDC_AUDIENCE, and ORIGINOS_OIDC_JWKS_URI are required in OIDC mode");
+    authentication = Object.freeze({ mode, issuer, audience, jwksUri, agentRefsClaim: environment.ORIGINOS_OIDC_AGENT_REFS_CLAIM?.trim() || "originos_agent_refs", requiredScope: environment.ORIGINOS_OIDC_REQUIRED_SCOPE?.trim() || "originos:commands" });
+  } else if (mode === "static") {
+    if (environment.NODE_ENV === "production") throw new Error("static authentication is unavailable when NODE_ENV=production");
+    const suppliedAuthConfig = environment.ORIGINOS_AUTH_CONFIG?.trim();
+    if (!suppliedAuthConfig) throw new Error("ORIGINOS_AUTH_CONFIG is required in static mode");
+    authentication = Object.freeze({ mode, configPath: isAbsolute(suppliedAuthConfig) ? suppliedAuthConfig : resolve(suppliedAuthConfig) });
+  } else throw new Error("ORIGINOS_AUTH_MODE must be oidc or static");
   const databaseUrl = environment.ORIGINOS_DATABASE_URL?.trim();
-  return Object.freeze(databaseUrl ? { host, port, dataDirectory, authConfigPath, databaseUrl } : { host, port, dataDirectory, authConfigPath });
+  return Object.freeze(databaseUrl ? { host, port, dataDirectory, authentication, databaseUrl } : { host, port, dataDirectory, authentication });
 };
 
 export const startOriginService = async (config: ServiceConfig): Promise<OriginService> => {
@@ -39,8 +53,12 @@ export const startOriginService = async (config: ServiceConfig): Promise<OriginS
   const startupChecks = config.databaseUrl ? startupIntegrity.checks.filter((check) => check.name !== "canonical-store") : startupIntegrity.checks;
   if (startupChecks.some((check) => !check.ok)) throw new Error(`OriginOS data integrity check failed: ${startupChecks.filter((check) => !check.ok).map((check) => `${check.name}: ${check.detail}`).join("; ")}`);
   const releaseLock = await acquireOperationalLock(config.dataDirectory);
-  let authenticator: StaticApiKeyAuthenticator;
-  try { authenticator = await StaticApiKeyAuthenticator.fromFile(config.authConfigPath); } catch (error) { await releaseLock(); throw error; }
+  let authenticator: RequestAuthenticator;
+  try {
+    authenticator = config.authentication.mode === "static"
+      ? await StaticApiKeyAuthenticator.fromFile(config.authentication.configPath)
+      : new OidcJwtAuthenticator({ ...config.authentication, jwksUri: config.authentication.jwksUri });
+  } catch (error) { await releaseLock(); throw error; }
   let repository: CanonicalRepository;
   let postgres: PostgresCanonicalRepository | undefined;
   if (config.databaseUrl) {

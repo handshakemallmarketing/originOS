@@ -33,7 +33,11 @@ importers:
         specifier: workspace:*
         version: link:../repository
 
-  packages/auth: {}
+  packages/auth:
+    dependencies:
+      jose:
+        specifier: 6.2.10
+        version: 6.2.10
 
   packages/canonical-types: {}
 
@@ -640,6 +644,9 @@ packages:
 
   isarray@2.0.5:
     resolution: {integrity: sha512-xHjhDr3cNBK0BzdUJSPXZntQUx/mwMS5Rw4A7lPJ90XGAO6ISP/ePDNuo0vhqOZU+UD5JoodwCAAoZQd3FeAKw==}
+
+  jose@6.2.10:
+    resolution: {integrity: sha512-iiW7J9qRFlGxvCOIBDBDxFePQSn7ZMAnrYGhrrOo6siO/MIqwfyilLR27pkfDgUk+raLuzADS8A3S/KLBisc0g==}
 
   js-tokens@9.0.1:
     resolution: {integrity: sha512-mxa9E9ITFOt0ban3j6L5MpjwegGz6lBQmM1IJkWeBZGcMxto50+eWdjC/52xDbS2vy0k7vIMK0Fe2wfL9OQSpQ==}
@@ -1319,6 +1326,8 @@ snapshots:
   immutable@4.3.9: {}
 
   isarray@2.0.5: {}
+
+  jose@6.2.10: {}
 
   js-tokens@9.0.1: {}
 

@@ -107,7 +107,7 @@ export const createOriginHttpServer = (application: OriginApplication, receipts:
       const authentication = await options.authenticator.authenticate(typeof request.headers.authorization === "string" ? request.headers.authorization : undefined);
       if (!authentication.ok) {
         if (request.method === "POST" && url.pathname === "/v2/commands" && options.auditSink) try { await options.auditSink.record({ event: "command-request", statusCode: 401, outcome: "authentication-rejected" }); } catch { /* response remains authoritative */ }
-        return json(response, 401, { ok: false, error: { code: "ORIGINOS_AUTH_001_UNAUTHENTICATED", message: "A valid Bearer API key is required" } }, { "www-authenticate": "Bearer", "cache-control": "no-store" });
+        return json(response, 401, { ok: false, error: { code: "ORIGINOS_AUTH_001_UNAUTHENTICATED", message: "A valid Bearer token is required" } }, { "www-authenticate": "Bearer", "cache-control": "no-store" });
       }
       principal = authentication.principal;
     }
