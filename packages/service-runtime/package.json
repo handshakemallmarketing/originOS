@@ -1,6 +1,6 @@
 {
   "name": "@originos/service-runtime",
-  "version": "0.17.0-rc.5",
+  "version": "0.17.0-rc.6",
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {
@@ -12,5 +12,5 @@
     "@originos/repository-postgres": "workspace:*",
     "@originos/transport-http": "workspace:*"
   },
-  "scripts": {"build":"tsc -p tsconfig.json && esbuild src/main.ts --bundle --platform=node --format=esm --outfile=dist/service.js","typecheck":"tsc -p tsconfig.json --noEmit","test":"vitest run --passWithNoTests","start":"node dist/service.js"}
+  "scripts": {"build":"tsc -p tsconfig.json && esbuild src/main.ts --bundle --platform=node --format=esm --outfile=dist/service.js && esbuild src/serverless.ts --bundle --platform=node --format=esm --outfile=dist/serverless.js","typecheck":"tsc -p tsconfig.json --noEmit","test":"vitest run --passWithNoTests","start":"node dist/service.js"}
 }

@@ -41,6 +41,11 @@ export class PostgresCanonicalRepository implements CanonicalRepository {
       event jsonb NOT NULL,
       recorded_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`);
+    await this.#pool.query(`CREATE TABLE IF NOT EXISTS originos_request_audit_events (
+      sequence bigserial PRIMARY KEY,
+      event jsonb NOT NULL,
+      recorded_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`);
   }
 
   async append(request: AppendRequest): Promise<Result<CanonicalRecord>> {
@@ -105,6 +110,9 @@ export class PostgresCanonicalRepository implements CanonicalRepository {
   async transactionalAuditEvents(): Promise<readonly unknown[]> {
     const result = await this.#pool.query<{ event: unknown }>("SELECT event FROM originos_transactional_audit_events ORDER BY sequence");
     return Object.freeze(result.rows.map(({ event }) => frozen(event)));
+  }
+  requestAuditSink(): { record(event: unknown): Promise<void> } {
+    return { record: async (event) => { await this.#pool.query("INSERT INTO originos_request_audit_events (event) VALUES ($1::jsonb)", [JSON.stringify(event)]); } };
   }
   close(): Promise<void> { return this.#pool.end(); }
   #query<T extends Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<QueryResult<T>> {

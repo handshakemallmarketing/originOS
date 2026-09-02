@@ -95,6 +95,12 @@ PostgreSQL deployments must use database-native encrypted backup, restore, crede
 
 This remains an application release candidate. OIDC supplies federated identity and issuer-managed signing-key rotation, but deployment still requires TLS termination, identity-provider administration, authorization governance, and operational monitoring. The audit log remains deliberately outside the canonical command transaction.
 
+### SW2-RC6 Vercel and Neon deployment
+
+`api/index.ts` exposes the existing HTTP contract as a Vercel Node function without starting a process listener. The Vercel runtime requires OIDC and PostgreSQL; it has no JSON repository, static-key, local-lock, or local-audit fallback. Canonical versions, command receipts, transactional accepted-command audits, and operational request audits persist in PostgreSQL.
+
+Configure these Vercel environment variables using secrets, never committed files: `ORIGINOS_DATABASE_URL`, `ORIGINOS_AUTH_MODE=oidc`, `ORIGINOS_OIDC_ISSUER`, `ORIGINOS_OIDC_AUDIENCE`, and `ORIGINOS_OIDC_JWKS_URI`. Runtime traffic should use a pooled Neon URL with certificate verification and channel binding. Run controlled migrations with a separately protected direct database URL. The deployment is pinned to Vercel `iad1`, close to the selected Neon `us-east-2` region.
+
 ## Commands
 
 ```bash

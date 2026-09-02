@@ -21,6 +21,7 @@ export interface OriginHttpOptions {
   readonly readiness?: () => Promise<{ readonly ok: boolean; readonly checks: readonly unknown[] }>;
   readonly webApp?: OriginWebApp;
 }
+export type OriginHttpHandler = (request: IncomingMessage, response: ServerResponse) => Promise<void>;
 
 const stable = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stable);
@@ -89,7 +90,7 @@ const readJson = async (request: IncomingMessage): Promise<unknown> => {
 };
 const statusFor = (code: CanonicalErrorCode): number => code === "C2C_E009_CONFLICT_UNRESOLVED" || code === "C2C_E010_TRANSITION_INVALID" ? 409 : code === "C2C_E005_AUTHORITY_INVALID" ? 403 : 400;
 
-export const createOriginHttpServer = (application: OriginApplication, receipts: CommandReceiptStore, options: OriginHttpOptions): Server => createServer(async (request, response) => {
+export const createOriginHttpHandler = (application: OriginApplication, receipts: CommandReceiptStore, options: OriginHttpOptions): OriginHttpHandler => async (request, response) => {
   try {
     const url = new URL(request.url ?? "/", "http://originos.local");
     if (request.method === "GET" && options.webApp) {
@@ -147,4 +148,6 @@ export const createOriginHttpServer = (application: OriginApplication, receipts:
   } catch (error) {
     return json(response, 400, { ok: false, error: { code: "C2C_E001_TYPE_MISMATCH", message: error instanceof Error ? error.message : "Invalid request" } });
   }
-});
+};
+
+export const createOriginHttpServer = (application: OriginApplication, receipts: CommandReceiptStore, options: OriginHttpOptions): Server => createServer(createOriginHttpHandler(application, receipts, options));
