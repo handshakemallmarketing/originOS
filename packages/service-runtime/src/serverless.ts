@@ -50,8 +50,10 @@ export const createServerlessRuntime = async (config: ServerlessConfig): Promise
 
 let runtime: Promise<OriginHttpHandler> | undefined;
 export default async function vercelHandler(request: IncomingMessage, response: ServerResponse): Promise<void> {
-  runtime ??= createServerlessRuntime(loadServerlessConfig(process.env));
-  try { await (await runtime)(request, response); }
+  try {
+    runtime ??= createServerlessRuntime(loadServerlessConfig(process.env));
+    await (await runtime)(request, response);
+  }
   catch (error) {
     runtime = undefined;
     if (!response.headersSent) response.writeHead(503, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
