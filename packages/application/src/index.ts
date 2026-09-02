@@ -23,9 +23,20 @@ export interface ApplicationCommandEnvelope {
 }
 
 export class OriginApplication {
+  #executionTail: Promise<void> = Promise.resolve();
+
   constructor(readonly repository: CanonicalRepository) {}
 
   async execute(envelope: ApplicationCommandEnvelope): Promise<Result<TransitionOutcome>> {
+    let release!: () => void;
+    const predecessor = this.#executionTail;
+    this.#executionTail = new Promise<void>((resolve) => { release = resolve; });
+    await predecessor;
+    try { return await this.executeSerialized(envelope); }
+    finally { release(); }
+  }
+
+  private async executeSerialized(envelope: ApplicationCommandEnvelope): Promise<Result<TransitionOutcome>> {
     if (!envelope.commandId || !envelope.agentRef || !envelope.agencyRef || !envelope.authorityRef || !envelope.purposeRef || envelope.evidenceRefs.length === 0 || !envelope.attributionRule) {
       return { ok: false, error: canonicalError("C2C_E004_PROVENANCE_MISSING", "Command envelope requires Agent, Agency, Authority, Purpose, evidence, and attribution", ["C2C-INV-003", "C2C-INV-004"]) };
     }

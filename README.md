@@ -156,3 +156,9 @@ Pending consideration or unfulfilled Purpose produces an incomplete Value status
 The complete SW2 cocoa path is now release-candidate audited as one workflow rather than as isolated sprint slices. An application-level acceptance test proves the seven-command, 12-record chain from raw-lot registration through realized Value, including atomic multi-record transitions and idempotent replay.
 
 The audit also closes a material-conservation gap: once a processed output lot has been materialized, its raw parent lot is consumed and can no longer be custody-transferred. RC1 is a GO for bounded alpha evaluation and a NO-GO for production deployment until the security, concurrency, live PostgreSQL recovery, and broader commercial boundaries in `SW2_RC1_AUDIT_REPORT.md` are resolved.
+
+### SW2-RC2 serialized command execution
+
+OriginOS now serializes application command execution within each running service instance. The full read–validate–append sequence completes before the next command evaluates canonical state, preventing concurrent commands with different identifiers from both passing a semantic uniqueness check against stale state.
+
+A concurrency acceptance test submits two processed-lot materialization commands for the same Completion at once and proves that exactly one succeeds. This closes the single-service race identified by RC1; multi-instance production deployment still requires a database-backed transaction or advisory-lock boundary.

@@ -1,6 +1,6 @@
 {
   "name": "@originos/application",
-  "version": "0.5.0-alpha.1",
+  "version": "0.17.0-rc.2",
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {

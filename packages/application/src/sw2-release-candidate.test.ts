@@ -34,4 +34,19 @@ describe("SW2 bounded-alpha release candidate", () => {
     expect(transfer.ok).toBe(false);
     if (!transfer.ok) expect(transfer.error.code).toBe("C2C_E010_TRANSITION_INVALID");
   });
+
+  it("serializes concurrent commands so semantic uniqueness sees committed state", async () => {
+    const application = new OriginApplication(new InMemoryCanonicalRepository());
+    for (const command of commands.slice(0, 4)) expect((await application.execute(command)).ok).toBe(true);
+    const competing = [
+      envelope("rc-materialize-a", "materializeProcessedCocoaLot", { processedLotId: "rc-processed-a", completionRef: "originos:completion-rc-completion" }),
+      envelope("rc-materialize-b", "materializeProcessedCocoaLot", { processedLotId: "rc-processed-b", completionRef: "originos:completion-rc-completion" })
+    ];
+    const results = await Promise.all(competing.map((command) => application.execute(command)));
+    expect(results.filter((result) => result.ok)).toHaveLength(1);
+    const rejected = results.find((result) => !result.ok);
+    expect(rejected && !rejected.ok && rejected.error.code).toBe("C2C_E010_TRANSITION_INVALID");
+    expect((await application.all()).filter((record) => record.canonicalType === "material-lot")).toHaveLength(2);
+    expect((await application.execute(envelope("rc-after-rejection", "registerCocoaLot", { lotId: "rc-after-rejection", quantityKg: 1, originRef: "originos:farm-rc", custodianRef: "originos:warehouse-rc" }))).ok).toBe(true);
+  });
 });
