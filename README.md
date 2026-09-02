@@ -162,3 +162,9 @@ The audit also closes a material-conservation gap: once a processed output lot h
 OriginOS now serializes application command execution within each running service instance. The full read–validate–append sequence completes before the next command evaluates canonical state, preventing concurrent commands with different identifiers from both passing a semantic uniqueness check against stale state.
 
 A concurrency acceptance test submits two processed-lot materialization commands for the same Completion at once and proves that exactly one succeeds. This closes the single-service race identified by RC1; multi-instance production deployment still requires a database-backed transaction or advisory-lock boundary.
+
+### SW2-RC3 transactional PostgreSQL audit evidence
+
+PostgreSQL command execution now commits canonical records, the idempotency receipt, and a structured command audit event in the same serializable transaction under the existing advisory lock. If any step fails before commit, the transaction is rolled back rather than leaving canonical state without corresponding audit evidence.
+
+Readiness reports the number of reachable transactional audit events, and tests verify the HTTP event passed into the transaction, committed event retrieval, idempotent replay without duplicate audit, and rollback SQL ordering under injected failure. The hash-chained operational log remains a separate observability channel. JSON-file mode remains bounded-alpha because atomicity cannot span its three independent files.

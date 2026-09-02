@@ -1,6 +1,6 @@
 {
   "name": "@originos/service-runtime",
-  "version": "0.17.0-rc.2",
+  "version": "0.17.0-rc.3",
   "type": "module",
   "exports": "./src/index.ts",
   "dependencies": {

@@ -38,7 +38,7 @@ describe("PostgreSQL canonical repository", () => {
     expect((await store.append({ record: makeRecord(1) })).ok).toBe(true);
     expect((await store.append({ record: makeRecord(2), expectedCurrentVersion: recordVersion(1) })).ok).toBe(true);
     expect((await store.history(canonicalId("originos:postgres-record"))).map(({ recordVersion }) => recordVersion)).toEqual([1, 2]);
-    expect(await store.check()).toEqual({ ok: true, detail: "2 canonical versions and 0 committed command receipts reachable" });
+    expect(await store.check()).toEqual({ ok: true, detail: "2 canonical versions, 0 committed command receipts, and 0 transactional audit events reachable" });
     await store.close();
   });
   it("rolls back an invalid multi-record batch", async () => {
@@ -54,14 +54,15 @@ describe("PostgreSQL canonical repository", () => {
       calls += 1;
       const appended = await store.append({ record: makeRecord(1) });
       expect(appended.ok).toBe(true);
-      return { statusCode: 200, body: { ok: true, version: 1 } };
+      return { statusCode: 200, body: { ok: true, version: 1 }, transactionalAuditEvent: { commandId: "command-one", outcome: "accepted" } };
     };
     const digest = "a".repeat(64);
     expect(await receipts.execute("command-one", digest, operation)).toEqual({ replayed: false, statusCode: 200, body: { ok: true, version: 1 } });
     expect(await receipts.execute("command-one", digest, operation)).toEqual({ replayed: true, statusCode: 200, body: { ok: true, version: 1 } });
     expect(calls).toBe(1);
     expect(await store.all()).toHaveLength(1);
-    expect(await store.check()).toEqual({ ok: true, detail: "1 canonical versions and 1 committed command receipts reachable" });
+    expect(await store.check()).toEqual({ ok: true, detail: "1 canonical versions, 1 committed command receipts, and 1 transactional audit events reachable" });
+    expect(await store.transactionalAuditEvents()).toEqual([{ commandId: "command-one", outcome: "accepted" }]);
     expect((await receipts.execute("command-one", "b".repeat(64), operation)).statusCode).toBe(409);
     expect(calls).toBe(1);
     await store.close();
@@ -72,9 +73,12 @@ describe("PostgreSQL canonical repository", () => {
     const receipts = store.receiptStore({ afterOperationBeforeCommit: () => { throw new Error("injected failure"); } });
     await expect(receipts.execute("command-failure", "c".repeat(64), async () => {
       expect((await store.append({ record: makeRecord(1) })).ok).toBe(true);
-      return { statusCode: 200, body: { ok: true } };
+      return { statusCode: 200, body: { ok: true }, transactionalAuditEvent: { commandId: "command-failure", outcome: "accepted" } };
     })).rejects.toThrow("injected failure");
     expect(statements.at(-1)).toBe("ROLLBACK");
+    expect(statements.some((statement) => statement.startsWith("INSERT INTO originos_canonical_records"))).toBe(true);
+    expect(statements).toContain("INSERT INTO originos_transactional_audit_events (idempotency_key, event) VALUES ($1, $2::jsonb)");
+    expect(statements).not.toContain("COMMIT");
     await store.close();
   });
 });

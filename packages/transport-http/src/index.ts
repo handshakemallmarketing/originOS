@@ -10,7 +10,8 @@ import { apiVersion, openApiDocument, validateApplicationCommandEnvelope } from 
 export interface CommandReceipt { readonly key: string; readonly requestDigest: string; readonly state: "pending" | "committed"; readonly statusCode?: number; readonly body?: unknown }
 interface ReceiptFile { readonly version: 1; readonly receipts: readonly CommandReceipt[] }
 export interface ReceiptExecution { readonly replayed: boolean; readonly statusCode: number; readonly body: unknown }
-export interface CommandReceiptStore { execute(key: string, digest: string, operation: () => Promise<Omit<ReceiptExecution, "replayed">>): Promise<ReceiptExecution> }
+export interface ReceiptOperationResult extends Omit<ReceiptExecution, "replayed"> { readonly transactionalAuditEvent?: unknown }
+export interface CommandReceiptStore { execute(key: string, digest: string, operation: () => Promise<ReceiptOperationResult>): Promise<ReceiptExecution> }
 export interface ReceiptStoreOptions { readonly afterOperationBeforeCommit?: () => void | Promise<void> }
 export interface TransportAuditEvent { readonly event: "command-request"; readonly principalId?: string; readonly commandId?: string; readonly commandType?: string; readonly statusCode: number; readonly replayed?: boolean; readonly outcome: string }
 export interface OriginWebApp { render(pathname: string): { readonly statusCode: number; readonly contentType: string; readonly body: string } | undefined }
@@ -52,7 +53,7 @@ export class JsonCommandReceiptStore implements CommandReceiptStore {
     await writeFile(temporaryPath, JSON.stringify(stable({ version: 1, receipts: [...receipts.values()] } satisfies ReceiptFile)), "utf8");
     await rename(temporaryPath, this.filePath);
   }
-  execute(key: string, digest: string, operation: () => Promise<Omit<ReceiptExecution, "replayed">>): Promise<ReceiptExecution> {
+  execute(key: string, digest: string, operation: () => Promise<ReceiptOperationResult>): Promise<ReceiptExecution> {
     const execution = this.#queue.then(async () => {
       const receipts = await this.#load();
       const existing = receipts.get(key);
@@ -62,7 +63,7 @@ export class JsonCommandReceiptStore implements CommandReceiptStore {
       }
       if (existing && existing.requestDigest !== digest) return { replayed: false, statusCode: 409, body: { ok: false, error: { code: "C2C_E009_CONFLICT_UNRESOLVED", message: "Idempotency key was already used for a different command" } } };
       if (!existing) { receipts.set(key, { key, requestDigest: digest, state: "pending" }); await this.#persist(receipts); }
-      const result = await operation();
+      const { transactionalAuditEvent: _transactionalAuditEvent, ...result } = await operation();
       await this.options.afterOperationBeforeCommit?.();
       const receipt: CommandReceipt = { key, requestDigest: digest, state: "committed", statusCode: result.statusCode, body: result.body };
       receipts.set(key, receipt);
@@ -126,7 +127,11 @@ export const createOriginHttpServer = (application: OriginApplication, receipts:
       if (envelope.commandId !== key) return audited(400, { ok: false, error: { code: "C2C_E001_TYPE_MISMATCH", message: "Idempotency-Key must equal commandId" } }, { event: "command-request", commandId: envelope.commandId, commandType: envelope.command.commandType, statusCode: 400, outcome: "identity-rejected" });
       const execution = await receipts.execute(key, requestDigest(envelope), async () => {
         const result = await application.execute(envelope);
-        return result.ok ? { statusCode: 201, body: result } : { statusCode: statusFor(result.error.code), body: result };
+        const statusCode = result.ok ? 201 : statusFor(result.error.code);
+        return { statusCode, body: result, transactionalAuditEvent: {
+          event: "command-request", principalId: principal.principalId, commandId: envelope.commandId,
+          commandType: envelope.command.commandType, statusCode, outcome: statusCode < 400 ? "accepted" : "application-rejected"
+        } satisfies TransportAuditEvent };
       });
       return audited(execution.statusCode, execution.body, { event: "command-request", commandId: envelope.commandId, commandType: envelope.command.commandType, statusCode: execution.statusCode, replayed: execution.replayed, outcome: execution.statusCode < 400 ? "accepted" : "application-rejected" }, { "idempotency-replayed": String(execution.replayed) });
     }

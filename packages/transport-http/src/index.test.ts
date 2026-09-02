@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { OriginApplication, type ApplicationCommandEnvelope } from "@originos/application";
 import type { RequestAuthenticator } from "@originos/auth";
 import { JsonFileCanonicalRepository } from "@originos/repository";
-import { createOriginHttpServer, JsonCommandReceiptStore } from "./index.js";
+import { createOriginHttpServer, JsonCommandReceiptStore, type CommandReceiptStore } from "./index.js";
 
 const servers: import("node:http").Server[] = [];
 const authenticator: RequestAuthenticator = { authenticate: async (authorization) => authorization === "Bearer valid-key" ? { ok: true, principal: { principalId: "test-operator", permittedAgentRefs: ["originos:merchant-1"] } } : { ok: false } };
@@ -34,6 +34,21 @@ const post = (baseUrl: string, envelope: ApplicationCommandEnvelope, key?: strin
 });
 
 describe("Software Sprint 1 HTTP transport", () => {
+  it("passes an accepted command audit event into the receipt transaction", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "originos-http-transactional-audit-"));
+    const application = new OriginApplication(new JsonFileCanonicalRepository(join(directory, "canonical.json")));
+    let captured: unknown;
+    const receipts: CommandReceiptStore = { execute: async (_key, _digest, operation) => {
+      const result = await operation(); captured = result.transactionalAuditEvent;
+      return { replayed: false, statusCode: result.statusCode, body: result.body };
+    } };
+    const server = createOriginHttpServer(application, receipts, { authenticator }); servers.push(server);
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    expect((await post(baseUrl, command(), "http-decision")).status).toBe(201);
+    expect(captured).toEqual({ event: "command-request", principalId: "test-operator", commandId: "http-decision", commandType: "recordDecision", statusCode: 201, outcome: "accepted" });
+  });
+
   it("recovers a pending receipt after a crash window without partial or duplicate effects", async () => {
     const directory = await mkdtemp(join(tmpdir(), "originos-http-recovery-"));
     const storePath = join(directory, "canonical.json"); const receiptPath = join(directory, "receipts.json");

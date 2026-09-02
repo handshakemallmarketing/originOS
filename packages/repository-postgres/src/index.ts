@@ -7,6 +7,7 @@ export interface SqlQueryable { query<T extends Record<string, unknown> = Record
 export interface SqlPool extends SqlQueryable { connect(): Promise<PoolClient>; end(): Promise<void> }
 export interface PostgresReceiptStoreOptions { readonly afterOperationBeforeCommit?: () => void | Promise<void> }
 export interface PostgresReceiptExecution { readonly replayed: boolean; readonly statusCode: number; readonly body: unknown }
+export interface PostgresReceiptOperationResult extends Omit<PostgresReceiptExecution, "replayed"> { readonly transactionalAuditEvent?: unknown }
 const frozen = <T>(value: T): T => Object.freeze(structuredClone(value));
 const absent = (id: CanonicalId): Result<CanonicalRecord> => ({ ok: false, error: canonicalError("C2C_E011_IDENTITY_AMBIGUOUS", "Canonical identity is not present", [], { id }) });
 
@@ -33,6 +34,12 @@ export class PostgresCanonicalRepository implements CanonicalRepository {
       response_body jsonb,
       updated_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CHECK ((state = 'pending' AND status_code IS NULL) OR (state = 'committed' AND status_code IS NOT NULL))
+    )`);
+    await this.#pool.query(`CREATE TABLE IF NOT EXISTS originos_transactional_audit_events (
+      sequence bigserial PRIMARY KEY,
+      idempotency_key text NOT NULL UNIQUE REFERENCES originos_command_receipts(idempotency_key),
+      event jsonb NOT NULL,
+      recorded_at timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`);
   }
 
@@ -90,9 +97,14 @@ export class PostgresCanonicalRepository implements CanonicalRepository {
     try {
       const canonical = await this.#pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM originos_canonical_records");
       const receipts = await this.#pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM originos_command_receipts WHERE state = 'committed'");
-      return { ok: true, detail: `${canonical.rows[0]?.count ?? "0"} canonical versions and ${receipts.rows[0]?.count ?? "0"} committed command receipts reachable` };
+      const audit = await this.#pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM originos_transactional_audit_events");
+      return { ok: true, detail: `${canonical.rows[0]?.count ?? "0"} canonical versions, ${receipts.rows[0]?.count ?? "0"} committed command receipts, and ${audit.rows[0]?.count ?? "0"} transactional audit events reachable` };
     }
     catch (error) { return { ok: false, detail: error instanceof Error ? error.message : "database unavailable" }; }
+  }
+  async transactionalAuditEvents(): Promise<readonly unknown[]> {
+    const result = await this.#pool.query<{ event: unknown }>("SELECT event FROM originos_transactional_audit_events ORDER BY sequence");
+    return Object.freeze(result.rows.map(({ event }) => frozen(event)));
   }
   close(): Promise<void> { return this.#pool.end(); }
   #query<T extends Record<string, unknown>>(text: string, values?: readonly unknown[]): Promise<QueryResult<T>> {
@@ -104,7 +116,7 @@ export class PostgresCanonicalRepository implements CanonicalRepository {
 
 export class PostgresCommandReceiptStore {
   constructor(readonly pool: SqlPool, readonly transaction: AsyncLocalStorage<PoolClient>, readonly options: PostgresReceiptStoreOptions = {}) {}
-  async execute(key: string, digest: string, operation: () => Promise<Omit<PostgresReceiptExecution, "replayed">>): Promise<PostgresReceiptExecution> {
+  async execute(key: string, digest: string, operation: () => Promise<PostgresReceiptOperationResult>): Promise<PostgresReceiptExecution> {
     if (!key.trim()) throw new Error("Idempotency key is required");
     if (!/^[a-f0-9]{64}$/.test(digest)) throw new Error("Request digest must be a lowercase SHA-256 hex string");
     const client = await this.pool.connect();
@@ -122,7 +134,8 @@ export class PostgresCommandReceiptStore {
         return { replayed: true, statusCode: existing.status_code ?? 500, body: existing.response_body };
       }
       if (!existing) await client.query("INSERT INTO originos_command_receipts (idempotency_key, request_digest, state) VALUES ($1, $2, 'pending')", [key, digest]);
-      const result = await this.transaction.run(client, operation);
+      const { transactionalAuditEvent, ...result } = await this.transaction.run(client, operation);
+      if (transactionalAuditEvent !== undefined) await client.query("INSERT INTO originos_transactional_audit_events (idempotency_key, event) VALUES ($1, $2::jsonb)", [key, JSON.stringify(transactionalAuditEvent)]);
       await this.options.afterOperationBeforeCommit?.();
       await client.query("UPDATE originos_command_receipts SET state = 'committed', status_code = $2, response_body = $3::jsonb, updated_at = CURRENT_TIMESTAMP WHERE idempotency_key = $1", [key, result.statusCode, JSON.stringify(result.body)]);
       await client.query("COMMIT");
