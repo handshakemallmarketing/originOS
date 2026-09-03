@@ -8,8 +8,8 @@ describe("RC6 Vercel serverless configuration", () => {
   });
 
   it("loads the bounded production configuration", () => {
-    expect(loadServerlessConfig({ ORIGINOS_AUTH_MODE: "oidc", ORIGINOS_DATABASE_URL: "postgres://db", ORIGINOS_OIDC_ISSUER: "https://id.example", ORIGINOS_OIDC_AUDIENCE: "originos", ORIGINOS_OIDC_JWKS_URI: "https://id.example/jwks" })).toEqual({
-      databaseUrl: "postgres://db", issuer: "https://id.example", audience: "originos", jwksUri: "https://id.example/jwks", agentRefsClaim: "originos_agent_refs", requiredScope: "originos:commands"
+    expect(loadServerlessConfig({ ORIGINOS_AUTH_MODE: "oidc", ORIGINOS_DATABASE_URL: "postgres://db", ORIGINOS_OIDC_ISSUER: "https://id.example", ORIGINOS_OIDC_AUDIENCE: "originos", ORIGINOS_OIDC_JWKS_URI: "https://id.example/jwks", ORIGINOS_OIDC_CLIENT_ID: "web-client" })).toEqual({
+      databaseUrl: "postgres://db", issuer: "https://id.example", audience: "originos", jwksUri: "https://id.example/jwks", clientId: "web-client", agentRefsClaim: "originos_agent_refs", requiredScope: "originos:commands"
     });
   });
 });

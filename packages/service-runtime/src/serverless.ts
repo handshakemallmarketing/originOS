@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { OriginApplication } from "@originos/application";
 import { OidcJwtAuthenticator } from "@originos/auth";
-import { operatorWebApp } from "@originos/operator-web";
+import { createOperatorWebApp } from "@originos/operator-web";
 import { PostgresCanonicalRepository } from "@originos/repository-postgres";
 import { createOriginHttpHandler, type OriginHttpHandler } from "@originos/transport-http";
 
@@ -10,6 +10,7 @@ export interface ServerlessConfig {
   readonly issuer: string;
   readonly audience: string;
   readonly jwksUri: string;
+  readonly clientId: string;
   readonly agentRefsClaim: string;
   readonly requiredScope: string;
 }
@@ -27,6 +28,7 @@ export const loadServerlessConfig = (environment: NodeJS.ProcessEnv): Serverless
     issuer: required(environment, "ORIGINOS_OIDC_ISSUER"),
     audience: required(environment, "ORIGINOS_OIDC_AUDIENCE"),
     jwksUri: required(environment, "ORIGINOS_OIDC_JWKS_URI"),
+    clientId: required(environment, "ORIGINOS_OIDC_CLIENT_ID"),
     agentRefsClaim: environment.ORIGINOS_OIDC_AGENT_REFS_CLAIM?.trim() || "originos_agent_refs",
     requiredScope: environment.ORIGINOS_OIDC_REQUIRED_SCOPE?.trim() || "originos:commands"
   });
@@ -40,7 +42,7 @@ export const createServerlessRuntime = async (config: ServerlessConfig): Promise
   return createOriginHttpHandler(application, repository.receiptStore(), {
     authenticator,
     auditSink: repository.requestAuditSink(),
-    webApp: operatorWebApp,
+    webApp: createOperatorWebApp({ issuer: config.issuer, clientId: config.clientId, audience: config.audience }),
     readiness: async () => {
       const database = await repository.check();
       return { ok: database.ok, checks: [{ name: "postgresql-transaction-store", ...database }] };

@@ -11,6 +11,13 @@ describe("SW2-01 Merchant/Cocoa operator shell", () => {
     }
   });
   it("does not claim unknown routes", () => { expect(renderOperatorPage("/not-present")).toBeUndefined(); });
+
+  it("injects PKCE login only when browser authentication is configured", () => {
+    const configured = renderOperatorPage("/", { issuer: "https://tenant.example", clientId: "web-client", audience: "originos-api" })!.body;
+    expect(configured).toContain("Sign in with Google");
+    expect(configured).toContain("web-client");
+    expect(renderOperatorPage("/")!.body).not.toContain("Sign in with Google");
+  });
   it("maps the lot form contract to one canonical API v2 command", () => {
     expect(createCocoaLotEnvelope({ lotId: "GH-2026-001", quantityKg: 1250.5, originRef: "originos:farm-ghana-1", custodianRef: "originos:warehouse-1", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRef: "originos:evidence-cocoa-receipt", attributionRule: "originos:attribution-direct-agent" })).toEqual({
       commandId: "operator-GH-2026-001", agentRef: "originos:merchant-1", agencyRef: "originos:agency-cocoa-procurement", authorityRef: "originos:authority-cocoa-procurement", purposeRef: "originos:purpose-conforming-cocoa", evidenceRefs: ["originos:evidence-cocoa-receipt"], attributionRule: "originos:attribution-direct-agent", command: { commandType: "registerCocoaLot", payload: { lotId: "GH-2026-001", quantityKg: 1250.5, originRef: "originos:farm-ghana-1", custodianRef: "originos:warehouse-1" } }
