@@ -14,6 +14,7 @@ describe("operator browser authentication", () => {
     expect(script).toContain('grant_type:"authorization_code"');
     expect(script).toContain('connection:"google-oauth2"');
     expect(script).toContain('audience:config.audience');
+    expect(script).toContain('dispatchEvent(new Event("originos:authenticated"))');
     expect(script).not.toContain("client_secret");
     expect(() => new Function(script.slice("<script>".length, -"</script>".length))).not.toThrow();
   });
