@@ -15,6 +15,8 @@ describe("operator browser authentication", () => {
     expect(script).toContain('connection:"google-oauth2"');
     expect(script).toContain('audience:config.audience');
     expect(script).toContain('dispatchEvent(new Event("originos:authenticated"))');
+    expect(script).toContain("window.originosAuth=window.originosAuth||{authenticated:false}");
+    expect(script).toContain("window.originosOnAuthenticated=window.originosOnAuthenticated||(callback=>{if(window.originosAuth.authenticated)callback();else window.addEventListener(\"originos:authenticated\",callback,{once:true})})");
     expect(script).not.toContain("client_secret");
     expect(() => new Function(script.slice("<script>".length, -"</script>".length))).not.toThrow();
   });
