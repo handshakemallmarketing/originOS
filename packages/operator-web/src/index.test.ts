@@ -17,7 +17,7 @@ describe("SW2-01 Merchant/Cocoa operator shell", () => {
     expect(configured).toContain("Sign in with Google");
     expect(configured).toContain("web-client");
     expect(configured).toContain("[hidden]{display:none!important}");
-    expect(renderOperatorPage("/lots", { issuer: "https://tenant.example", clientId: "web-client", audience: "originos-api" })!.body).toContain('addEventListener("originos:authenticated"');
+    expect(renderOperatorPage("/lots", { issuer: "https://tenant.example", clientId: "web-client", audience: "originos-api" })!.body).toContain('originosOnAuthenticated(');
     expect(renderOperatorPage("/")!.body).not.toContain("Sign in with Google");
   });
   it("maps the lot form contract to one canonical API v2 command", () => {
