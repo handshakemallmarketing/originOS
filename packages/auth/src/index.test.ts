@@ -15,7 +15,7 @@ describe("OIDC JWT authentication", () => {
     const { privateKey, publicKey } = await generateKeyPair("RS256");
     const publicJwk = await exportJWK(publicKey); publicJwk.kid = "test-key"; publicJwk.alg = "RS256";
     const authenticator = new OidcJwtAuthenticator({ issuer: "https://identity.example.test", audience: "originos-api", jwksUri: "https://identity.example.test/.well-known/jwks.json" }, createLocalJWKSet({ keys: [publicJwk] }));
-    const token = (claims: Record<string, unknown> = {}, audience = "originos-api") => new SignJWT({ scope: "originos:commands", originos_agent_refs: ["originos:merchant-1"], ...claims }).setProtectedHeader({ alg: "RS256", kid: "test-key" }).setSubject("operator-42").setIssuer("https://identity.example.test").setAudience(audience).setIssuedAt().setExpirationTime("5m").sign(privateKey);
+    const token = (claims: Record<string, unknown> = {}, audience = "originos-api") => new SignJWT({ scope: "originos:commands", originos_agent_refs: ["originos:merchant-1"], ...claims }).setProtectedHeader({ alg: "RS256", kid: "test-key" }).setSubject("operator-42").setIssuer("https://identity.example.test/").setAudience(audience).setIssuedAt().setExpirationTime("5m").sign(privateKey);
     return { authenticator, token };
   };
 

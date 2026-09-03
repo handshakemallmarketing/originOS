@@ -54,10 +54,14 @@ export class OidcJwtAuthenticator implements RequestAuthenticator {
   readonly #keySet: JWTVerifyGetKey;
 
   constructor(options: OidcJwtAuthenticatorOptions, keySet?: JWTVerifyGetKey) {
-    this.#issuer = requiredText(options.issuer, "OIDC issuer");
+    const configuredIssuer = requiredText(options.issuer, "OIDC issuer");
     let issuerUrl: URL;
-    try { issuerUrl = new URL(this.#issuer); } catch { throw new Error("OIDC issuer must be a valid URL"); }
+    try { issuerUrl = new URL(configuredIssuer); } catch { throw new Error("OIDC issuer must be a valid URL"); }
     if (issuerUrl.protocol !== "https:") throw new Error("OIDC issuer must use HTTPS");
+    issuerUrl.pathname = issuerUrl.pathname.replace(/\/+$/, "") + "/";
+    issuerUrl.search = "";
+    issuerUrl.hash = "";
+    this.#issuer = issuerUrl.toString();
     this.#audience = requiredText(options.audience, "OIDC audience");
     this.#agentRefsClaim = requiredText(options.agentRefsClaim ?? "originos_agent_refs", "OIDC Agent refs claim");
     this.#requiredScope = requiredText(options.requiredScope ?? "originos:commands", "OIDC required scope");
