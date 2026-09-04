@@ -18,4 +18,17 @@ describe("SW2-06 processed cocoa material lineage", () => {
   it("rejects materialization after custody no longer matches the completing processor", () => { const moved = applied(ready(), { commandType: "transferCustody", payload: { transferId: "post-process-transfer", lotRef: "originos:material-lot-source-lot", fromCustodianRef: "originos:processor-1", toCustodianRef: "originos:warehouse-2", quantityKg: 750 } }); const result = applyCommand(moved, materialize); expect(result.ok).toBe(false); if (!result.ok) expect(result.error.code).toBe("C2C_E010_TRANSITION_INVALID"); });
   it("locks the consumed input lot after processed output materialization", () => { const records = applied(ready(), materialize); const result = applyCommand(records, { commandType: "transferCustody", payload: { transferId: "consumed-source-transfer", lotRef: "originos:material-lot-source-lot", fromCustodianRef: "originos:processor-1", toCustodianRef: "originos:warehouse-2", quantityKg: 750 } }); expect(result.ok).toBe(false); if (!result.ok) { expect(result.error.code).toBe("C2C_E010_TRANSITION_INVALID"); expect(result.error.message).toContain("Consumed input lot"); } });
   it("rejects a second processed lot for the same Completion", () => { const records = applied(ready(), materialize); const result = applyCommand(records, { ...materialize, payload: { ...materialize.payload, processedLotId: "processed-lot-2" } }); expect(result.ok).toBe(false); if (!result.ok) expect(result.error.code).toBe("C2C_E010_TRANSITION_INVALID"); });
+  it("rejects materialization if the Completion's own quantities are not conserved, even though completeCocoaProcessing can never produce such a record", () => {
+    // completeCocoaProcessing already enforces outputQuantityKg <= inputQuantityKg, so this
+    // scenario can only arise from a Completion record reconstructed or tampered with
+    // out-of-band. materializeProcessedCocoaLot must not trust the Completion's stored
+    // quantities without re-checking them — this is the defense that check exists for.
+    const base = ready();
+    const completion = base.find((record) => record.canonicalType === "completion");
+    expect(completion).toBeDefined();
+    const tampered = base.map((record) => record === completion ? { ...record, content: { ...(record.content as Readonly<Record<string, unknown>>), outputQuantityKg: (record.content as { inputQuantityKg: number }).inputQuantityKg + 1 } } : record);
+    const result = applyCommand(tampered, materialize);
+    expect(result.ok).toBe(false);
+    if (!result.ok) { expect(result.error.code).toBe("C2C_E010_TRANSITION_INVALID"); expect(result.error.message).toContain("conserved output quantity"); }
+  });
 });
