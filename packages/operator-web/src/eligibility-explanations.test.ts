@@ -29,6 +29,11 @@ const setUpPage = (path: "/transfers" | "/workflow", scriptIndex: number, record
     if (url.includes("/v2/records")) return { ok: true, json: async () => ({ records }) };
     throw new Error("unexpected fetch " + url);
   }) as typeof fetch;
+  // Script 0 is always the auth script — every page script now calls
+  // window.originosOnAuthenticated unconditionally, so it must run first
+  // (it will not actually authenticate here, since no session is seeded;
+  // these tests exercise the manual "Load..." button, not auto-load).
+  dom.window.eval(scripts[0]!);
   dom.window.eval(scripts[scriptIndex]!);
   return dom.window;
 };
