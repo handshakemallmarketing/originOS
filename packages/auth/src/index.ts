@@ -8,6 +8,8 @@ export interface AuthenticatedPrincipal {
   readonly permittedAgencyRefs?: readonly string[];
   /** Undefined means unrestricted (backward-compatible default). When set, the declared Authority on a command envelope must be a member. */
   readonly permittedAuthorityRefs?: readonly string[];
+  /** Undefined means unrestricted (backward-compatible default). When set, a `transferCustody` command's `fromCustodianRef` — the party asserted to be relinquishing custody — must be a member. Does not scope `toCustodianRef` or `registerCocoaLot`'s `custodianRef`; those name a counterparty rather than assert the caller's own identity, and binding them is tracked separately (see issue #10). */
+  readonly permittedCustodianRefs?: readonly string[];
 }
 export type AuthenticationResult = { readonly ok: true; readonly principal: AuthenticatedPrincipal } | { readonly ok: false };
 export interface RequestAuthenticator { authenticate(authorization: string | undefined): Promise<AuthenticationResult> }
@@ -20,9 +22,11 @@ export interface OidcJwtAuthenticatorOptions {
   readonly agencyRefsClaim?: string;
   /** Optional Authority-binding claim. Absent from a token's payload means unrestricted (backward-compatible default); present but malformed rejects the token. */
   readonly authorityRefsClaim?: string;
+  /** Optional Custodian-binding claim (see `AuthenticatedPrincipal.permittedCustodianRefs`). Absent from a token's payload means unrestricted (backward-compatible default); present but malformed rejects the token. */
+  readonly custodianRefsClaim?: string;
   readonly requiredScope?: string;
 }
-interface PrincipalConfig { readonly principalId: string; readonly apiKeySha256: string; readonly permittedAgentRefs: readonly string[]; readonly permittedAgencyRefs?: readonly string[]; readonly permittedAuthorityRefs?: readonly string[] }
+interface PrincipalConfig { readonly principalId: string; readonly apiKeySha256: string; readonly permittedAgentRefs: readonly string[]; readonly permittedAgencyRefs?: readonly string[]; readonly permittedAuthorityRefs?: readonly string[]; readonly permittedCustodianRefs?: readonly string[] }
 interface AuthConfig { readonly version: 1; readonly principals: readonly PrincipalConfig[] }
 export const hashApiKey = (apiKey: string): string => createHash("sha256").update(apiKey, "utf8").digest("hex");
 const parseConfig = (value: unknown): AuthConfig => {
@@ -37,10 +41,11 @@ const parseConfig = (value: unknown): AuthConfig => {
   const principals = object.principals.map((entry, index): PrincipalConfig => {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) throw new Error(`principal ${index} must be an object`);
     const candidate = entry as Record<string, unknown>;
-    if (Object.keys(candidate).some((key) => !["principalId", "apiKeySha256", "permittedAgentRefs", "permittedAgencyRefs", "permittedAuthorityRefs"].includes(key)) || typeof candidate.principalId !== "string" || candidate.principalId.trim() === "" || typeof candidate.apiKeySha256 !== "string" || !/^[a-f0-9]{64}$/.test(candidate.apiKeySha256) || !Array.isArray(candidate.permittedAgentRefs) || candidate.permittedAgentRefs.length === 0 || candidate.permittedAgentRefs.some((ref) => typeof ref !== "string" || ref.trim() === "")) throw new Error(`principal ${index} is invalid`);
+    if (Object.keys(candidate).some((key) => !["principalId", "apiKeySha256", "permittedAgentRefs", "permittedAgencyRefs", "permittedAuthorityRefs", "permittedCustodianRefs"].includes(key)) || typeof candidate.principalId !== "string" || candidate.principalId.trim() === "" || typeof candidate.apiKeySha256 !== "string" || !/^[a-f0-9]{64}$/.test(candidate.apiKeySha256) || !Array.isArray(candidate.permittedAgentRefs) || candidate.permittedAgentRefs.length === 0 || candidate.permittedAgentRefs.some((ref) => typeof ref !== "string" || ref.trim() === "")) throw new Error(`principal ${index} is invalid`);
     const permittedAgencyRefs = optionalRefs(candidate, "permittedAgencyRefs", index);
     const permittedAuthorityRefs = optionalRefs(candidate, "permittedAuthorityRefs", index);
-    return Object.freeze({ principalId: candidate.principalId, apiKeySha256: candidate.apiKeySha256, permittedAgentRefs: Object.freeze([...new Set(candidate.permittedAgentRefs as string[])]), ...(permittedAgencyRefs ? { permittedAgencyRefs } : {}), ...(permittedAuthorityRefs ? { permittedAuthorityRefs } : {}) });
+    const permittedCustodianRefs = optionalRefs(candidate, "permittedCustodianRefs", index);
+    return Object.freeze({ principalId: candidate.principalId, apiKeySha256: candidate.apiKeySha256, permittedAgentRefs: Object.freeze([...new Set(candidate.permittedAgentRefs as string[])]), ...(permittedAgencyRefs ? { permittedAgencyRefs } : {}), ...(permittedAuthorityRefs ? { permittedAuthorityRefs } : {}), ...(permittedCustodianRefs ? { permittedCustodianRefs } : {}) });
   });
   if (new Set(principals.map((principal) => principal.principalId)).size !== principals.length) throw new Error("principalId values must be unique");
   if (new Set(principals.map((principal) => principal.apiKeySha256)).size !== principals.length) throw new Error("apiKeySha256 values must be unique");
@@ -53,7 +58,7 @@ export class StaticApiKeyAuthenticator implements RequestAuthenticator {
   async authenticate(authorization: string | undefined): Promise<AuthenticationResult> {
     const match = /^Bearer\s+(.+)$/i.exec(authorization ?? ""); if (!match?.[1]) return { ok: false };
     const suppliedHash = Buffer.from(hashApiKey(match[1]), "hex");
-    for (const candidate of this.#principals) if (timingSafeEqual(suppliedHash, Buffer.from(candidate.apiKeySha256, "hex"))) return { ok: true, principal: Object.freeze({ principalId: candidate.principalId, permittedAgentRefs: candidate.permittedAgentRefs, ...(candidate.permittedAgencyRefs ? { permittedAgencyRefs: candidate.permittedAgencyRefs } : {}), ...(candidate.permittedAuthorityRefs ? { permittedAuthorityRefs: candidate.permittedAuthorityRefs } : {}) }) };
+    for (const candidate of this.#principals) if (timingSafeEqual(suppliedHash, Buffer.from(candidate.apiKeySha256, "hex"))) return { ok: true, principal: Object.freeze({ principalId: candidate.principalId, permittedAgentRefs: candidate.permittedAgentRefs, ...(candidate.permittedAgencyRefs ? { permittedAgencyRefs: candidate.permittedAgencyRefs } : {}), ...(candidate.permittedAuthorityRefs ? { permittedAuthorityRefs: candidate.permittedAuthorityRefs } : {}), ...(candidate.permittedCustodianRefs ? { permittedCustodianRefs: candidate.permittedCustodianRefs } : {}) }) };
     return { ok: false };
   }
 }
@@ -70,6 +75,7 @@ export class OidcJwtAuthenticator implements RequestAuthenticator {
   readonly #agentRefsClaim: string;
   readonly #agencyRefsClaim: string;
   readonly #authorityRefsClaim: string;
+  readonly #custodianRefsClaim: string;
   readonly #requiredScope: string;
   readonly #keySet: JWTVerifyGetKey;
 
@@ -86,6 +92,7 @@ export class OidcJwtAuthenticator implements RequestAuthenticator {
     this.#agentRefsClaim = requiredText(options.agentRefsClaim ?? "originos_agent_refs", "OIDC Agent refs claim");
     this.#agencyRefsClaim = requiredText(options.agencyRefsClaim ?? "originos_agency_refs", "OIDC Agency refs claim");
     this.#authorityRefsClaim = requiredText(options.authorityRefsClaim ?? "originos_authority_refs", "OIDC Authority refs claim");
+    this.#custodianRefsClaim = requiredText(options.custodianRefsClaim ?? "originos_custodian_refs", "OIDC Custodian refs claim");
     this.#requiredScope = requiredText(options.requiredScope ?? "originos:commands", "OIDC required scope");
     let jwks: URL;
     try { jwks = new URL(requiredText(options.jwksUri, "OIDC JWKS URI")); } catch { throw new Error("OIDC JWKS URI must be a valid URL"); }
@@ -114,7 +121,8 @@ export class OidcJwtAuthenticator implements RequestAuthenticator {
       };
       const permittedAgencyRefs = optionalRefs(this.#agencyRefsClaim);
       const permittedAuthorityRefs = optionalRefs(this.#authorityRefsClaim);
-      return { ok: true, principal: Object.freeze({ principalId: payload.sub, permittedAgentRefs: Object.freeze([...new Set(refs as string[])]), ...(permittedAgencyRefs ? { permittedAgencyRefs } : {}), ...(permittedAuthorityRefs ? { permittedAuthorityRefs } : {}) }) };
+      const permittedCustodianRefs = optionalRefs(this.#custodianRefsClaim);
+      return { ok: true, principal: Object.freeze({ principalId: payload.sub, permittedAgentRefs: Object.freeze([...new Set(refs as string[])]), ...(permittedAgencyRefs ? { permittedAgencyRefs } : {}), ...(permittedAuthorityRefs ? { permittedAuthorityRefs } : {}), ...(permittedCustodianRefs ? { permittedCustodianRefs } : {}) }) };
     } catch { return { ok: false }; }
   }
 }

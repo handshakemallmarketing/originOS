@@ -148,4 +148,25 @@ describe("Software Sprint 1 HTTP transport", () => {
     expect((await post(baseUrl, command(), "http-decision")).status).toBe(201);
     expect(await application.all()).toHaveLength(1);
   });
+
+  it("rejects a transferCustody whose fromCustodianRef is outside a principal's explicit Custodian binding, and leaves toCustodianRef/registerCocoaLot unaffected", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "originos-http-custodian-"));
+    const boundAuthenticator: RequestAuthenticator = { authenticate: async (authorization) => authorization === "Bearer valid-key" ? { ok: true, principal: { principalId: "test-operator", permittedAgentRefs: ["originos:merchant-1"], permittedCustodianRefs: ["originos:warehouse-1"] } } : { ok: false } };
+    const application = new OriginApplication(new JsonFileCanonicalRepository(join(directory, "canonical.json")));
+    const server = createOriginHttpServer(application, new JsonCommandReceiptStore(join(directory, "receipts.json")), { authenticator: boundAuthenticator });
+    servers.push(server); await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+    const registered = await post(baseUrl, { ...command(), commandId: "http-lot", command: { commandType: "registerCocoaLot", payload: { lotId: "http-lot", quantityKg: 100, originRef: "originos:farm-1", custodianRef: "originos:warehouse-1" } } }, "http-lot");
+    expect(registered.status).toBe(201);
+
+    const transfer = (commandId: string, fromCustodianRef: string) => ({ ...command(), commandId, command: { commandType: "transferCustody", payload: { transferId: commandId, lotRef: "originos:material-lot-http-lot", fromCustodianRef, toCustodianRef: "originos:processor-1", quantityKg: 100 } } });
+    const deniedCustodian = await post(baseUrl, transfer("http-transfer-denied", "originos:warehouse-unbound"), "http-transfer-denied");
+    expect(deniedCustodian.status).toBe(403);
+    expect((await deniedCustodian.json() as { error: { code: string } }).error.code).toBe("ORIGINOS_AUTH_005_CUSTODIAN_BINDING_DENIED");
+    expect(await application.all()).toHaveLength(1);
+
+    const allowed = await post(baseUrl, transfer("http-transfer-allowed", "originos:warehouse-1"), "http-transfer-allowed");
+    expect(allowed.status).toBe(201);
+  });
 });
