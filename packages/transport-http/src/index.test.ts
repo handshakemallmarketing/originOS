@@ -128,4 +128,24 @@ describe("Software Sprint 1 HTTP transport", () => {
     expect(await application.all()).toHaveLength(0);
     expect((await fetch(`${baseUrl}/v2/records`)).status).toBe(401);
   });
+
+  it("rejects Agency/Authority declarations outside a principal's explicit bindings when the principal declares them, and stays unrestricted when it does not", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "originos-http-agency-authority-"));
+    const boundAuthenticator: RequestAuthenticator = { authenticate: async (authorization) => authorization === "Bearer valid-key" ? { ok: true, principal: { principalId: "test-operator", permittedAgentRefs: ["originos:merchant-1"], permittedAgencyRefs: ["originos:agency-cocoa-procurement"], permittedAuthorityRefs: ["originos:authority-cocoa-procurement"] } } : { ok: false } };
+    const application = new OriginApplication(new JsonFileCanonicalRepository(join(directory, "canonical.json")));
+    const server = createOriginHttpServer(application, new JsonCommandReceiptStore(join(directory, "receipts.json")), { authenticator: boundAuthenticator });
+    servers.push(server); await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+
+    const deniedAgency = await post(baseUrl, { ...command(), agencyRef: "originos:agency-unbound" }, "http-decision");
+    expect(deniedAgency.status).toBe(403);
+    expect((await deniedAgency.json() as { error: { code: string } }).error.code).toBe("ORIGINOS_AUTH_003_AGENCY_BINDING_DENIED");
+
+    const deniedAuthority = await post(baseUrl, { ...command(), authorityRef: "originos:authority-unbound" }, "http-decision");
+    expect(deniedAuthority.status).toBe(403);
+    expect((await deniedAuthority.json() as { error: { code: string } }).error.code).toBe("ORIGINOS_AUTH_004_AUTHORITY_BINDING_DENIED");
+
+    expect((await post(baseUrl, command(), "http-decision")).status).toBe(201);
+    expect(await application.all()).toHaveLength(1);
+  });
 });
