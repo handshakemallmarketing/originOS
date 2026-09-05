@@ -21,3 +21,4 @@ ADRs are implementation decisions, not canonical authority. Every ADR must inclu
 | 0013 | OIDC bearer authentication for the Vercel runtime | Accepted |
 | 0014 | PostgreSQL/Neon as the serverless persistence path | Accepted |
 | 0015 | Vercel serverless entry point as a thin re-export | Accepted |
+| 0016 | Physical deployment isolation as the multi-tenancy boundary | Accepted |
