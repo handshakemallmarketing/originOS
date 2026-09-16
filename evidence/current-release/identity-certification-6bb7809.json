@@ -1,0 +1,55 @@
+{
+  "evidenceId": "CURRENT-RELEASE-IDENTITY-6BB7809-2026-09-16",
+  "branch": "originos/release-conformance-completion",
+  "certifiedCommitSha": "6bb7809c5bf6f6db549e288e62945cb0b1578cc4",
+  "productionActivationAuthorized": false,
+  "result": "PASS",
+  "workflowEvidence": {
+    "workflow": "originos-ci",
+    "runNumber": 63,
+    "runId": 35158127024,
+    "conclusion": "success"
+  },
+  "authenticationBoundary": {
+    "productionStaticAuthentication": "REJECTED_BY_CONFIGURATION",
+    "productionRequiredMode": "oidc",
+    "oidc": {
+      "signatureAlgorithmFixture": "RS256",
+      "issuerValidation": true,
+      "audienceValidation": true,
+      "requiredCommandScope": true,
+      "httpsJwksRequired": true,
+      "malformedBearerRejected": true,
+      "explicitAgentBindings": true,
+      "explicitAgencyBindings": true,
+      "explicitAuthorityBindings": true,
+      "explicitCustodianBindings": true
+    }
+  },
+  "serviceAuthorizationFalsification": {
+    "unauthenticatedCommandsRejected": true,
+    "unauthenticatedRecordReadsRejected": true,
+    "unboundAgentRejectedBeforeSideEffects": true,
+    "unboundAgencyRejectedBeforeSideEffects": true,
+    "unboundAuthorityRejectedBeforeSideEffects": true,
+    "unboundCurrentCustodianRejectedBeforeSideEffects": true,
+    "bindingErrorCodes": [
+      "ORIGINOS_AUTH_002_AGENT_BINDING_DENIED",
+      "ORIGINOS_AUTH_003_AGENCY_BINDING_DENIED",
+      "ORIGINOS_AUTH_004_AUTHORITY_BINDING_DENIED",
+      "ORIGINOS_AUTH_005_CUSTODIAN_BINDING_DENIED"
+    ]
+  },
+  "scopeLimits": [
+    "This certification establishes implemented authentication and explicit request-binding enforcement at the tested service boundary.",
+    "It does not certify any external identity-provider tenant configuration or deployment environment.",
+    "It does not assert agentRef/Participant equivalence.",
+    "It does not assert counterparty custody-consent semantics."
+  ],
+  "remainingReleaseGates": [
+    "exact-head-deployment-certification",
+    "residual-gap-classification",
+    "independent-review"
+  ],
+  "releaseStatement": "Identity certification evidence only. This artifact does not authorize Production activation or assert final release readiness."
+}
