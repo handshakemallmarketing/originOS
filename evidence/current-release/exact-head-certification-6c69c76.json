@@ -1,0 +1,55 @@
+{
+  "evidenceId": "CURRENT-RELEASE-EXACT-HEAD-6C69C76-2026-09-16",
+  "branch": "originos/release-conformance-completion",
+  "commitSha": "6c69c76fda0e6f8ca16e6eb56be3f180e8cdf386",
+  "productionActivationAuthorized": false,
+  "certifications": {
+    "verify": {
+      "result": "PASS",
+      "workflow": "originos-ci",
+      "runNumber": 62,
+      "runId": 35157427354,
+      "job": "verify"
+    },
+    "conservationFalsification": {
+      "result": "PASS",
+      "testFile": "packages/application/src/sw2-release-candidate.test.ts",
+      "cases": [
+        "partial custody quantity rejected without committed-state mutation",
+        "processed output quantity above input rejected without completion mutation",
+        "consumed input reuse rejected"
+      ]
+    },
+    "custodyAuthorityFalsification": {
+      "result": "PASS",
+      "testFile": "packages/application/src/sw2-release-candidate.test.ts",
+      "cases": [
+        "transfer by non-current custodian rejected without committed-state mutation"
+      ],
+      "scopeLimit": "This evidence does not assert counterparty custody-consent semantics."
+    },
+    "postgresqlPersistence": {
+      "result": "PASS",
+      "workflow": "originos-ci",
+      "runNumber": 62,
+      "runId": 35157427354,
+      "job": "live-postgresql",
+      "database": "PostgreSQL 17",
+      "command": "pnpm --filter @originos/repository-postgres test:live",
+      "testFile": "packages/repository-postgres/src/live-postgres.test.ts",
+      "testsPassed": 1,
+      "testsFailed": 0
+    }
+  },
+  "notCertifiedByThisArtifact": [
+    "exact-head-identity-certification",
+    "exact-head-deployment-certification",
+    "residual-gap-classification",
+    "independent-review"
+  ],
+  "semanticQuarantines": [
+    "agentRef/Participant equivalence",
+    "counterparty custody-consent semantics"
+  ],
+  "releaseStatement": "Evidence capture only. This artifact does not authorize Production activation or assert release readiness."
+}
