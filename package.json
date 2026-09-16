@@ -13,7 +13,8 @@
     "check:boundaries": "node scripts/check-boundaries.mjs",
     "check:traceability": "node scripts/check-traceability.mjs",
     "check:release": "node scripts/check-release-evidence.mjs",
-    "check": "pnpm check:boundaries && pnpm check:traceability && pnpm check:release && pnpm typecheck && pnpm test",
+    "check:current-release": "node scripts/check-current-release-evidence.mjs",
+    "check": "pnpm check:boundaries && pnpm check:traceability && pnpm check:release && pnpm check:current-release && pnpm typecheck && pnpm test",
     "start:service": "pnpm build && node packages/service-runtime/dist/service.js",
     "ops": "pnpm --filter @originos/operations build && node packages/operations/dist/operations.js"
   },
