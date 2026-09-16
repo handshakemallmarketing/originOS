@@ -49,4 +49,39 @@ describe("SW2 bounded-alpha release candidate", () => {
     expect((await application.all()).filter((record) => record.canonicalType === "material-lot")).toHaveLength(2);
     expect((await application.execute(envelope("rc-after-rejection", "registerCocoaLot", { lotId: "rc-after-rejection", quantityKg: 1, originRef: "originos:farm-rc", custodianRef: "originos:warehouse-rc" }))).ok).toBe(true);
   });
+
+  it("falsifies quantity inflation and partial custody transfer without mutating committed state", async () => {
+    const application = new OriginApplication(new InMemoryCanonicalRepository());
+    expect((await application.execute(commands[0]!)).ok).toBe(true);
+
+    const partialTransfer = await application.execute(envelope("rc-partial-transfer", "transferCustody", {
+      transferId: "rc-partial", lotRef: "originos:material-lot-rc-raw", fromCustodianRef: "originos:warehouse-rc",
+      toCustodianRef: "originos:processor-rc", quantityKg: 749
+    }));
+    expect(partialTransfer.ok).toBe(false);
+    if (!partialTransfer.ok) expect(partialTransfer.error.code).toBe("C2C_E010_TRANSITION_INVALID");
+    expect(await application.all()).toHaveLength(1);
+
+    expect((await application.execute(commands[1]!)).ok).toBe(true);
+    expect((await application.execute(commands[2]!)).ok).toBe(true);
+    const inflatedOutput = await application.execute(envelope("rc-inflated-output", "completeCocoaProcessing", {
+      completionId: "rc-inflated", transformationRef: "originos:transformation-rc-process-transformation",
+      processorRef: "originos:processor-rc", outputQuantityKg: 751, accepted: true, consequence: "invalid-inflation-attempt"
+    }));
+    expect(inflatedOutput.ok).toBe(false);
+    if (!inflatedOutput.ok) expect(inflatedOutput.error.code).toBe("C2C_E010_TRANSITION_INVALID");
+    expect((await application.all()).some((record) => record.canonicalType === "completion")).toBe(false);
+  });
+
+  it("falsifies custody by a non-current transferor", async () => {
+    const application = new OriginApplication(new InMemoryCanonicalRepository());
+    expect((await application.execute(commands[0]!)).ok).toBe(true);
+    const unauthorizedCustody = await application.execute(envelope("rc-wrong-transferor", "transferCustody", {
+      transferId: "rc-wrong-transferor", lotRef: "originos:material-lot-rc-raw", fromCustodianRef: "originos:intruder-rc",
+      toCustodianRef: "originos:processor-rc", quantityKg: 750
+    }));
+    expect(unauthorizedCustody.ok).toBe(false);
+    if (!unauthorizedCustody.ok) expect(unauthorizedCustody.error.code).toBe("C2C_E010_TRANSITION_INVALID");
+    expect(await application.all()).toHaveLength(1);
+  });
 });
