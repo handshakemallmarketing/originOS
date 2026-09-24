@@ -46,9 +46,23 @@
     "residual-gap-classification",
     "independent-review"
   ],
-  "quarantinedSemantics": [
-    "agentRef/Participant equivalence",
-    "counterparty custody-consent semantics"
+  "semanticDecisions": [
+    {
+      "topic": "agentRef/Participant equivalence",
+      "status": "resolved",
+      "decidedBy": "DR-011",
+      "decidedAt": "2026-09-24",
+      "record": "docs/execution/ACCELERATED_AUTONOMOUS_DECISION_REGISTER.md",
+      "decision": "agentRef/agencyRef/authorityRef are references to the ratified AM-002 Participant plus Article VIII operational-accountability metadata, not a new canonical primitive."
+    },
+    {
+      "topic": "counterparty custody-consent semantics",
+      "status": "resolved",
+      "decidedBy": "DR-012",
+      "decidedAt": "2026-09-24",
+      "record": "docs/execution/ACCELERATED_AUTONOMOUS_DECISION_REGISTER.md",
+      "decision": "The existing asserting-party-only binding (fromCustodianRef) is final; recipient-binding/consent semantics are not built absent a validated product need."
+    }
   ],
   "notes": [
     "This file is additive and does not replace or weaken the historical SW0 traceability matrix.",

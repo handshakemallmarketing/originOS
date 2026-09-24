@@ -32,9 +32,14 @@ for (const evidence of requiredEvidence) {
   if (!matrix.releaseEvidenceRequired?.includes(evidence)) throw new Error(`Missing release-evidence requirement: ${evidence}`);
 }
 
-const requiredQuarantines = ["agentRef/Participant equivalence", "counterparty custody-consent semantics"];
-for (const semantic of requiredQuarantines) {
-  if (!matrix.quarantinedSemantics?.includes(semantic)) throw new Error(`Missing semantic quarantine: ${semantic}`);
+const requiredSemanticTopics = ["agentRef/Participant equivalence", "counterparty custody-consent semantics"];
+for (const topic of requiredSemanticTopics) {
+  const entry = matrix.semanticDecisions?.find((candidate) => candidate.topic === topic);
+  if (!entry) throw new Error(`Missing semantic decision record: ${topic}`);
+  if (!["quarantined", "resolved"].includes(entry.status)) throw new Error(`Semantic decision has invalid status: ${topic}`);
+  if (entry.status === "resolved" && (!entry.decision || !entry.decidedBy || !entry.record)) {
+    throw new Error(`Resolved semantic decision missing decision/decidedBy/record: ${topic}`);
+  }
 }
 
-console.log(`Current-release evidence baseline passed: ${requiredSlices.length} slices mapped, ${requiredEvidence.length} certification gates declared, Production fail-closed.`);
+console.log(`Current-release evidence baseline passed: ${requiredSlices.length} slices mapped, ${requiredEvidence.length} certification gates declared, ${requiredSemanticTopics.length} semantic decisions accounted for, Production fail-closed.`);
