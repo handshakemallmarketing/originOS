@@ -1,6 +1,5 @@
 import { canonicalError, evaluationFamilies, type CanonicalError, type CanonicalRecord } from "@originos/canonical-types";
 
-export const sprint0InvariantIds = Array.from({ length: 20 }, (_, i) => `C2C-INV-${String(i + 1).padStart(3, "0")}`) as readonly string[];
 export interface InvariantContext { readonly records: readonly CanonicalRecord[]; readonly command?: unknown }
 export type InvariantValidator = (context: InvariantContext) => readonly CanonicalError[];
 

@@ -11,7 +11,7 @@ import { PostgresCanonicalRepository } from "@originos/repository-postgres";
 import { createOriginHttpServer, JsonCommandReceiptStore, type CommandReceiptStore } from "@originos/transport-http";
 
 export type ServiceAuthenticationConfig =
-  | { readonly mode: "oidc"; readonly issuer: string; readonly audience: string; readonly jwksUri: string; readonly agentRefsClaim: string; readonly requiredScope: string }
+  | { readonly mode: "oidc"; readonly issuer: string; readonly audience: string; readonly jwksUri: string; readonly agentRefsClaim: string; readonly agencyRefsClaim?: string; readonly authorityRefsClaim?: string; readonly custodianRefsClaim?: string; readonly requiredScope: string }
   | { readonly mode: "static"; readonly configPath: string };
 export interface ServiceConfig { readonly host: string; readonly port: number; readonly dataDirectory: string; readonly authentication: ServiceAuthenticationConfig; readonly databaseUrl?: string }
 export interface OriginService {
@@ -36,7 +36,13 @@ export const loadServiceConfig = (environment: NodeJS.ProcessEnv): ServiceConfig
     const audience = environment.ORIGINOS_OIDC_AUDIENCE?.trim();
     const jwksUri = environment.ORIGINOS_OIDC_JWKS_URI?.trim();
     if (!issuer || !audience || !jwksUri) throw new Error("ORIGINOS_OIDC_ISSUER, ORIGINOS_OIDC_AUDIENCE, and ORIGINOS_OIDC_JWKS_URI are required in OIDC mode");
-    authentication = Object.freeze({ mode, issuer, audience, jwksUri, agentRefsClaim: environment.ORIGINOS_OIDC_AGENT_REFS_CLAIM?.trim() || "originos_agent_refs", requiredScope: environment.ORIGINOS_OIDC_REQUIRED_SCOPE?.trim() || "originos:commands" });
+    const agencyRefsClaim = environment.ORIGINOS_OIDC_AGENCY_REFS_CLAIM?.trim();
+    const authorityRefsClaim = environment.ORIGINOS_OIDC_AUTHORITY_REFS_CLAIM?.trim();
+    const custodianRefsClaim = environment.ORIGINOS_OIDC_CUSTODIAN_REFS_CLAIM?.trim();
+    authentication = Object.freeze({
+      mode, issuer, audience, jwksUri, agentRefsClaim: environment.ORIGINOS_OIDC_AGENT_REFS_CLAIM?.trim() || "originos_agent_refs", requiredScope: environment.ORIGINOS_OIDC_REQUIRED_SCOPE?.trim() || "originos:commands",
+      ...(agencyRefsClaim ? { agencyRefsClaim } : {}), ...(authorityRefsClaim ? { authorityRefsClaim } : {}), ...(custodianRefsClaim ? { custodianRefsClaim } : {})
+    });
   } else if (mode === "static") {
     if (environment.NODE_ENV === "production") throw new Error("static authentication is unavailable when NODE_ENV=production");
     const suppliedAuthConfig = environment.ORIGINOS_AUTH_CONFIG?.trim();

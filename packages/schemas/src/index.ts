@@ -1,9 +1,4 @@
 export const apiVersion = "2.0.0" as const;
-export const schemaCatalog = { document: "C2C-01", version: "0.7.0-alpha.1", schemas: [
-  "canonical-record-envelope", "canonical-error", "canonical-bundle", "computation-result", "decision", "delegation", "act",
-  "transformation", "transformation-event", "outcome", "consequence", "value-status", "material-lot", "custody-transfer",
-  "application-command-envelope", "conformance-fixture"
-] } as const;
 
 type FieldType = "string" | "number" | "boolean" | "array";
 interface CommandShape { readonly required: Readonly<Record<string, FieldType>>; readonly optional?: Readonly<Record<string, FieldType>> }

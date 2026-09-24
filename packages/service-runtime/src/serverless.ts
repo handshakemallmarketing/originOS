@@ -12,6 +12,9 @@ export interface ServerlessConfig {
   readonly jwksUri: string;
   readonly clientId: string;
   readonly agentRefsClaim: string;
+  readonly agencyRefsClaim?: string;
+  readonly authorityRefsClaim?: string;
+  readonly custodianRefsClaim?: string;
   readonly requiredScope: string;
 }
 
@@ -23,6 +26,9 @@ const required = (environment: NodeJS.ProcessEnv, name: string): string => {
 
 export const loadServerlessConfig = (environment: NodeJS.ProcessEnv): ServerlessConfig => {
   if (environment.ORIGINOS_AUTH_MODE?.trim().toLowerCase() !== "oidc") throw new Error("Vercel runtime requires ORIGINOS_AUTH_MODE=oidc");
+  const agencyRefsClaim = environment.ORIGINOS_OIDC_AGENCY_REFS_CLAIM?.trim();
+  const authorityRefsClaim = environment.ORIGINOS_OIDC_AUTHORITY_REFS_CLAIM?.trim();
+  const custodianRefsClaim = environment.ORIGINOS_OIDC_CUSTODIAN_REFS_CLAIM?.trim();
   return Object.freeze({
     databaseUrl: required(environment, "ORIGINOS_DATABASE_URL"),
     issuer: required(environment, "ORIGINOS_OIDC_ISSUER"),
@@ -30,7 +36,8 @@ export const loadServerlessConfig = (environment: NodeJS.ProcessEnv): Serverless
     jwksUri: required(environment, "ORIGINOS_OIDC_JWKS_URI"),
     clientId: required(environment, "ORIGINOS_OIDC_CLIENT_ID"),
     agentRefsClaim: environment.ORIGINOS_OIDC_AGENT_REFS_CLAIM?.trim() || "originos_agent_refs",
-    requiredScope: environment.ORIGINOS_OIDC_REQUIRED_SCOPE?.trim() || "originos:commands"
+    requiredScope: environment.ORIGINOS_OIDC_REQUIRED_SCOPE?.trim() || "originos:commands",
+    ...(agencyRefsClaim ? { agencyRefsClaim } : {}), ...(authorityRefsClaim ? { authorityRefsClaim } : {}), ...(custodianRefsClaim ? { custodianRefsClaim } : {})
   });
 };
 
