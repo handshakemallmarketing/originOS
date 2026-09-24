@@ -41,18 +41,6 @@ importers:
 
   packages/canonical-types: {}
 
-  packages/cli:
-    dependencies:
-      '@originos/application':
-        specifier: workspace:*
-        version: link:../application
-      '@originos/conformance':
-        specifier: workspace:*
-        version: link:../conformance
-      '@originos/repository':
-        specifier: workspace:*
-        version: link:../repository
-
   packages/conformance:
     dependencies:
       '@originos/canonical-types':
