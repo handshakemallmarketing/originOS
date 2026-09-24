@@ -1,6 +1,6 @@
 {
   "document": "CURRENT-RELEASE-TRACEABILITY",
-  "candidateBaseSha": "062a23920918bcd71c8c2975ec91066ef326fd28",
+  "candidateBaseSha": "05fb73451ed8580fb5e904807ccd6665cecb6184",
   "branch": "originos/release-conformance-completion",
   "productionRelease": false,
   "historicalEvidence": {
