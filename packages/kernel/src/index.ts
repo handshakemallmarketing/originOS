@@ -241,7 +241,3 @@ export const applyCommand = (records: readonly CanonicalRecord[], command: Kerne
   }
   return notImplemented(`kernel command ${command.commandType}`);
 };
-
-export const exportedKernelCapabilities = [
-  "identity", "epistemic", "computation", "normative", "agency", "transformation", "realization", "interchange"
-] as const;

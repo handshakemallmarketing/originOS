@@ -57,6 +57,8 @@ The runtime validates its port, resolves its data directory, composes the applic
 
 OIDC access tokens must be RS256 signed, no older than 15 minutes, and contain `sub`, `iat`, `exp`, the `originos:commands` scope, and a nonempty `originos_agent_refs` string array. Issuer, audience, signature, time bounds, scope, and Agent bindings are verified on every request. The claim and scope names can be changed with `ORIGINOS_OIDC_AGENT_REFS_CLAIM` and `ORIGINOS_OIDC_REQUIRED_SCOPE`.
 
+Agency, Authority, and Custodian bindings are optional and unrestricted unless the issuer declares them: set `ORIGINOS_OIDC_AGENCY_REFS_CLAIM`, `ORIGINOS_OIDC_AUTHORITY_REFS_CLAIM`, and/or `ORIGINOS_OIDC_CUSTODIAN_REFS_CLAIM` to the claim names your identity provider issues (defaulting to `originos_agency_refs`, `originos_authority_refs`, and `originos_custodian_refs` respectively) to have `agencyRef`/`authorityRef`/`transferCustody`'s `fromCustodianRef` checked against them on every command, same as Agent bindings.
+
 For local development only, select `ORIGINOS_AUTH_MODE=static` and provide a hash-only auth file. Static mode is rejected when `NODE_ENV=production`:
 
 ```json
