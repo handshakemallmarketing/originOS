@@ -1,0 +1,36 @@
+{
+  "evidenceId": "CURRENT-RELEASE-DEPLOYMENT-CORRECTION-B3A08FA-2026-09-24",
+  "supersedes": [
+    "evidence/current-release/deployment-certification-e7b6d8c.json",
+    "evidence/current-release/residual-gap-classification-7c3fd3e.json (DEPLOYMENT-CERT-001 row only)",
+    "evidence/current-release/independent-review-05fb734.json (blockersConfirmed entry re: DEPLOYMENT-CERT-001 only)"
+  ],
+  "reason": "Both the deployment-certification artifact and this reviewer's own independent-review artifact concluded the origin-os Vercel project does not exist, reached independently by two different sessions using the same faulty method: calling the Vercel API with an explicit teamId parameter (team_WkMSXuSv8kDLoOlGHYtIggZ1). That call consistently 404s for this project. The repository owner supplied a screenshot of the live, working Vercel dashboard for the project (Production Deployment, Ready, main@5d723c8, domain origin-os-nine.vercel.app) that directly contradicted this. Re-querying the same Vercel account WITHOUT an explicit teamId (letting the token's default scope resolve) immediately finds the project. This was a query defect in both prior evidence-gathering passes, not an infrastructure or ownership problem.",
+  "correctedFindings": {
+    "projectExists": true,
+    "projectId": "prj_NM0w8BaQc5GEQMV2saIRdhj1VBQu",
+    "projectName": "origin-os",
+    "gitConnection": {
+      "provider": "github",
+      "org": "handshakemallmarketing",
+      "repo": "originOS",
+      "verified": true
+    },
+    "productionDomain": "origin-os-nine.vercel.app",
+    "latestProductionDeployment": {
+      "id": "dpl_9ABAPp3Gn4gh5uzdQQNYKVM7KqVY",
+      "state": "READY",
+      "githubCommitRef": "main",
+      "githubCommitSha": "5d723c8bf505b5ced805c01e15e30fb6280652a5",
+      "note": "This is main's tip immediately before PR #13. Every prior main-branch PR merge (#2 through #11) produced a corresponding READY production deployment at the matching commit SHA, confirmed via list_deployments history."
+    },
+    "workersFoodClubUntouched": true
+  },
+  "residualObservation": {
+    "id": "PREVIEW-BUILD-GAP-001",
+    "severity": "non-blocking",
+    "detail": "No Vercel preview deployment exists for the originos/release-conformance-completion branch (zero deployments returned for that branch), which explains why PR #13 received no 'Vercel Preview Comments' GitHub check or bot comment, unlike PRs opened from other branches. Production deployment on merge to main is a separate, unaffected path and is not expected to be impacted. Worth checking Vercel project Git settings (ignored build step, branch filters) if preview builds on this branch specifically are wanted, but this does not block release certification."
+  },
+  "productionActivationAuthorized": false,
+  "releaseStatement": "Correction of a prior false-negative deployment finding. DEPLOYMENT-CERT-001 is resolved: a working, git-connected, currently-serving deployment target exists for this repository. Exact-head certification for whatever commit becomes main's new tip after this PR merges still requires confirming the corresponding automatic production redeploy succeeds — that is routine post-merge verification, not a residual gap. This artifact does not authorize Production activation."
+}

@@ -1,0 +1,58 @@
+{
+  "document": "CURRENT-RELEASE-TRACEABILITY",
+  "candidateBaseSha": "05fb73451ed8580fb5e904807ccd6665cecb6184",
+  "branch": "originos/release-conformance-completion",
+  "productionRelease": false,
+  "historicalEvidence": {
+    "sw0Matrix": "docs/traceability/matrix.json",
+    "preserved": true
+  },
+  "slices": [
+    {
+      "id": "SW1-01",
+      "status": "implemented",
+      "report": "SW1-01_IMPLEMENTATION_REPORT.md",
+      "capabilities": [
+        "persistent canonical repository boundary",
+        "immutable version history across restart",
+        "application command/query boundary with Agent Agency Authority Purpose evidence attribution",
+        "merchant cocoa lineage and conserved quantity workflow",
+        "custody transfer",
+        "Comparison Decision Act Transformation Outcome Consequence Value workflow",
+        "executable cocoa demo",
+        "restart reload/query end-to-end coverage"
+      ]
+    },
+    {
+      "id": "SW2-01",
+      "status": "implemented-not-production-ready",
+      "report": "SW2-01_IMPLEMENTATION_REPORT.md",
+      "capabilities": [
+        "merchant cocoa operator shell",
+        "Overview Cocoa lots Custody Workflow System routes",
+        "operator-web separated from HTTP adapter",
+        "service composition with API authentication audit receipt persistence adapters",
+        "responsive accessible navigation baseline",
+        "service integration coverage while cocoa API workflow remains active"
+      ]
+    }
+  ],
+  "releaseEvidenceRequired": [
+    "conservation-falsification",
+    "custody-authority-falsification",
+    "exact-head-postgresql-persistence-certification",
+    "exact-head-identity-certification",
+    "exact-head-deployment-certification",
+    "residual-gap-classification",
+    "independent-review"
+  ],
+  "quarantinedSemantics": [
+    "agentRef/Participant equivalence",
+    "counterparty custody-consent semantics"
+  ],
+  "notes": [
+    "This file is additive and does not replace or weaken the historical SW0 traceability matrix.",
+    "Implemented status is derived from repository implementation reports; certification status requires separately produced exact-head evidence.",
+    "No production activation is authorized by this traceability artifact."
+  ]
+}

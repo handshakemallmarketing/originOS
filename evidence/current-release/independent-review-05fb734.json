@@ -1,0 +1,40 @@
+{
+  "evidenceId": "CURRENT-RELEASE-INDEPENDENT-REVIEW-05FB734-2026-09-24",
+  "reviewer": "independent Claude session, not the authoring session",
+  "branch": "originos/release-conformance-completion",
+  "reviewedCommitSha": "05fb73451ed8580fb5e904807ccd6665cecb6184",
+  "productionActivationAuthorized": false,
+  "method": [
+    "Read every file changed relative to main@5d723c8 (decision register, corpus reconciliation, modernization plan, traceability matrix, all four prior evidence artifacts, new script, new test file, package.json).",
+    "Independently re-ran pnpm check and pnpm build on a fresh checkout of this branch rather than trusting CI's or the branch's own claims.",
+    "Cross-checked every CI run number/ID cited in evidence artifacts against the GitHub Actions API for this branch (runs 54-66, all originos-ci, all conclusion=success).",
+    "Diffed each certified commit (6c69c76 falsification/postgres, 6bb7809 identity) forward to the branch tip to confirm no source-code drift occurred after certification that would invalidate the evidence.",
+    "Verified the full branch diff against main touches only docs/, evidence/, one new test file, one new script, and an additive package.json line — no change to packages/kernel, packages/canonical-types, packages/auth, or packages/transport-http beyond what already merged in main@5d723c8.",
+    "Independently checked Vercel (team_WkMSXuSv8kDLoOlGHYtIggZ1, 'OriginOS') via get_project for both the known project ID (prj_NM0w8BaQc5GEQMV2saIRdhj1VBQu) and the name 'origin-os': both return 404 Not Found, corroborating DEPLOYMENT-CERT-001 independently rather than taking the prior artifact's word for it."
+  ],
+  "findings": {
+    "reproducedIndependently": [
+      "pnpm check: boundaries, traceability (15/15, 20/20), historical SW0 release gate (9 RC2 artifacts), current-release gate (2 slices, 7 gates, fail-closed), typecheck, and full test suite across all 15 packages — all green on a clean checkout.",
+      "pnpm build — green across all buildable packages.",
+      "sw2-release-candidate.test.ts is genuine falsification coverage, not restated assertions: it exercises the full 7-command SW2 lifecycle end-to-end, idempotent replay, consumed-input locking, concurrent semantic-uniqueness racing via Promise.all, quantity-inflation rejection, partial-transfer rejection, and non-current-transferor rejection — each against real ok:false/error-code outcomes, not mocks.",
+      "DR-005/DR-010 (decline to invent counterparty custody-consent semantics for toCustodianRef/registerCocoaLot) independently matches this reviewer's own prior recommendation on issue #10, reached separately before this branch was read.",
+      "Vercel origin-os project absence (DEPLOYMENT-CERT-001) reproduced independently, not merely re-cited."
+    ],
+    "residualObservations": [
+      "docs/traceability/current-release-matrix.json's candidateBaseSha (062a239) is a few commits behind the branch tip (05fb734). Non-blocking: no code changed between them, only further evidence/doc files, so the traceability mapping remains accurate — but the field should be bumped to the merge commit when this branch lands, so it doesn't read as stale to a future reader.",
+      "check-current-release-evidence.mjs validates that required evidence *categories* are declared in the matrix and that referenced implementation reports exist; it does not itself re-verify the content of the evidence/current-release/*.json files. That's an acceptable design for an additive gate (the content is human/agent-reviewed, as this review does), but it means the gate alone cannot catch a future evidence file being edited to overclaim. Worth a follow-up if this gate is expected to run unattended long-term."
+    ],
+    "blockersConfirmed": [
+      "DEPLOYMENT-CERT-001 remains open and is not resolvable without repository-owner input: the existing origin-os Vercel project is not visible to, or not present in, the only Vercel team this review has access to (team_WkMSXuSv8kDLoOlGHYtIggZ1). No new project should be created and workers-food-club must not be repurposed, consistent with the branch's own decision register."
+    ],
+    "blockersNotConfirmed": [
+      "No new P0 or P1 finding surfaced by this review beyond what the branch's own residual-gap-classification already listed."
+    ]
+  },
+  "semanticQuarantines": [
+    "agentRef/Participant equivalence",
+    "counterparty custody-consent semantics"
+  ],
+  "recommendation": "Merge this branch to main. It is additive, evidence-backed, independently reproduced, and does not authorize or perform any production activation. DEPLOYMENT-CERT-001 remains the sole open release blocker after merge and requires the repository owner to locate/authorize the intended deployment target.",
+  "releaseStatement": "Independent review evidence only. This artifact does not authorize Production activation."
+}
