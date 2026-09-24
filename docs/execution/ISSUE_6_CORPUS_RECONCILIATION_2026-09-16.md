@@ -35,18 +35,18 @@ These controls supersede the premise that the programme must choose one reposito
 | SW1/SW2 governance evidence missing | **STILL_VALID — P1** | Create current evidence manifests tied to exact commit, applicable baseline, tests, DB/runtime certification and residual exceptions. |
 | Missing OIDC/Postgres/Vercel ADRs | **CLOSED_BY_LATER_REPOSITORY_WORK** | ADR-0013 OIDC, ADR-0014 Postgres/Neon, ADR-0015 Vercel boundary, and ADR-0016 deployment isolation now exist. |
 | ADR numbering gap 0002 | **NOT A RELEASE BLOCKER** | Historical numbering gaps are not repaired by renumbering later ADRs; preserve stable identifiers. |
-| `agentRef` vs Participant identity | **DECISION/TRACEABILITY QUESTION — DO NOT INVENT** | C2C-01 explicitly includes Participant plus scoped Agent/Authority attribution. Software must trace the distinction; do not collapse terms without controlled mapping. |
-| Custodian counterparty consent semantics | **DECISION/TRACEABILITY QUESTION — DO NOT INVENT** | Enforce authenticated relinquishing-party boundary already implemented; do not infer consent/acceptance semantics for named counterparties without canonical support. |
+| `agentRef` vs Participant identity | **RESOLVED — see DR-011** | `agentRef`/`agencyRef`/`authorityRef` are references to the ratified AM-002 `Participant` plus Article VIII operational-accountability metadata, not a new canonical primitive. Recorded in `ACCELERATED_AUTONOMOUS_DECISION_REGISTER.md` DR-011; no code change required, terms remain distinct and uncollapsed. |
+| Custodian counterparty consent semantics | **RESOLVED — see DR-012** | The existing asserting-party-only binding (`fromCustodianRef`) is final; recipient-binding/consent semantics are deliberately not built absent a validated product need. Recorded in `ACCELERATED_AUTONOMOUS_DECISION_REGISTER.md` DR-012, consistent with DR-005. |
 
 ## Immediate executable backlog after reconciliation
 
 1. Extend traceability for current implemented record/transition families while preserving all historical SW0 IDs and evidence.
 2. Build a release-profile manifest that identifies exact Git SHA, CBR/C2C baseline, applicable invariants/fixtures, schema/persistence certification, identity/authority certification and deployment evidence.
 3. Targeted falsification for materialization and Value/delivery conservation.
-4. Verify Issue #10 remaining custody semantics against C2C/CBR/SA sources; escalate only if an implementation decision would add semantics.
+4. ~~Verify Issue #10 remaining custody semantics against C2C/CBR/SA sources; escalate only if an implementation decision would add semantics.~~ Done — see DR-012.
 5. Make `check-release-evidence.mjs` release-aware without weakening SW0 historical checks.
 6. Produce exact-head evidence and residual-gap report before any merge/release decision.
 
 ## Current blocker posture
 
-No constitutional decision is required to continue the evidence/traceability/falsification tracks above. Two semantic questions remain quarantined: `agentRef`/Participant mapping and counterparty custody consent. Neither is silently resolved by this reconciliation.
+No constitutional decision is required to continue the evidence/traceability/falsification tracks above. The two semantic questions this reconciliation quarantined — `agentRef`/Participant mapping and counterparty custody consent — are now formally resolved per DR-011 and DR-012 in `ACCELERATED_AUTONOMOUS_DECISION_REGISTER.md`; neither was silently resolved by this reconciliation itself, and both resolutions are explicit, owner-authorized decision-register entries.

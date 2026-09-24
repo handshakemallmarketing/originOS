@@ -8,7 +8,7 @@ export interface AuthenticatedPrincipal {
   readonly permittedAgencyRefs?: readonly string[];
   /** Undefined means unrestricted (backward-compatible default). When set, the declared Authority on a command envelope must be a member. */
   readonly permittedAuthorityRefs?: readonly string[];
-  /** Undefined means unrestricted (backward-compatible default). When set, a `transferCustody` command's `fromCustodianRef` — the party asserted to be relinquishing custody — must be a member. Does not scope `toCustodianRef` or `registerCocoaLot`'s `custodianRef`; those name a counterparty rather than assert the caller's own identity, and binding them is tracked separately (see issue #10). */
+  /** Undefined means unrestricted (backward-compatible default). When set, a `transferCustody` command's `fromCustodianRef` — the party asserted to be relinquishing custody — must be a member. Does not scope `toCustodianRef` or `registerCocoaLot`'s `custodianRef`; those name a counterparty rather than assert the caller's own identity, and binding them is deliberately out of scope absent a validated acceptance-workflow need (DR-012, `docs/execution/ACCELERATED_AUTONOMOUS_DECISION_REGISTER.md`). */
   readonly permittedCustodianRefs?: readonly string[];
 }
 export type AuthenticationResult = { readonly ok: true; readonly principal: AuthenticatedPrincipal } | { readonly ok: false };
